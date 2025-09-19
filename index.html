@@ -145,6 +145,12 @@
     });
     introClose.addEventListener('click', ()=>{ intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){} });
 
+    // ===== Spin music (idle 30%, spin 100%)
+    const spinSong = new Audio('song.mp3');
+    spinSong.loop = true;
+    spinSong.preload = 'auto';
+    spinSong.volume = 0.3; // 30% по умолчанию
+
     // ===== Wheel logic
     const points = [100,200,300,400,500,600,700,800,900,1000];
     const wheel = document.getElementById('wheel');
@@ -182,10 +188,35 @@
       ctx.restore();
     }
 
-    function spin(){ if(spinning) return; spinning=true; selectedIndex=null; vel=0.36+Math.random()*0.28; animate(); }
-    function animate(){ angle=(angle+vel)%(Math.PI*2); vel*=0.985; drawWheel(angle); if(vel>0.002) requestAnimationFrame(animate); else { spinning=false; finalize(); } }
+    function spin(){
+      if(spinning) return; 
+      spinning = true; selectedIndex = null;
+
+      // На время прокрутки — громкость 100% и воспроизводим
+      try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
+
+      // Ровно 20 секунд прокрутки постоянной скоростью
+      const DURATION = 20000; // мс
+      const SPEED = 0.02;     // рад/мс (~1.15 об/сек)
+      let lastTs = null; const endAt = performance.now() + DURATION;
+
+      function step(ts){
+        if(!lastTs) lastTs = ts;
+        const dt = ts - lastTs; lastTs = ts;
+        angle = (angle + SPEED * dt) % (Math.PI*2);
+        drawWheel(angle);
+        if(ts < endAt){ requestAnimationFrame(step); }
+        else { spinning = false; finalize(); }
+      }
+      requestAnimationFrame(step);
+    }
+
     function finalize(){
-      const n=points.length; const arc=2*Math.PI/n; selectedIndex = Math.floor(((Math.PI*2 - (angle%(Math.PI*2)))%(Math.PI*2))/arc); if(selectedIndex<0) selectedIndex=0; if(selectedIndex>=n) selectedIndex=n-1;
+      // После остановки — трек остаётся играть на 30%
+      try{ spinSong.volume = 0.3; if (spinSong.paused) spinSong.play(); }catch(e){}
+      const n=points.length; const arc=2*Math.PI/n; 
+      selectedIndex = Math.floor(((Math.PI*2 - (angle%(Math.PI*2)))%(Math.PI*2))/arc); 
+      if(selectedIndex<0) selectedIndex=0; if(selectedIndex>=n) selectedIndex=n-1;
       const p = points[selectedIndex];
       log(`🎯 Выпало: <b>${p}</b> очков`);
       document.getElementById('rule').innerHTML = `Твои очки: <span class="points">${p}</span>. Ответь на вопрос!`;
@@ -235,7 +266,16 @@
     document.getElementById('submit').addEventListener('click', checkAnswer);
     document.getElementById('answer').addEventListener('keydown', e=>{ if(e.key==='Enter') checkAnswer(); });
 
-    document.getElementById('reset').addEventListener('click', ()=>{ score=0; round=0; angle=0; vel=0; selectedIndex=null; document.getElementById('score').textContent='0'; document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.'; document.getElementById('question').textContent='Вопрос появится после спина.'; document.getElementById('length').textContent=''; drawWheel(0); document.getElementById('log').innerHTML=''; });
+    document.getElementById('reset').addEventListener('click', ()=>{ 
+      try{ spinSong.pause(); }catch(e){} 
+      spinSong.currentTime=0; spinSong.volume=0.3;
+      score=0; round=0; angle=0; vel=0; selectedIndex=null; 
+      document.getElementById('score').textContent='0'; 
+      document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.'; 
+      document.getElementById('question').textContent='Вопрос появится после спина.'; 
+      document.getElementById('length').textContent=''; 
+      drawWheel(0); document.getElementById('log').innerHTML=''; 
+    });
   </script>
 </body>
 </html>
