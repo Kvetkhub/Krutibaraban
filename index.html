@@ -1,484 +1,241 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gift Roulette — Wheel‑of‑Fortune</title>
+  <title>ПОЛЕ ЧУДЕС — Юбилейная игра для Евгения</title>
   <style>
     :root{
-      --bg:#0f1220; --card:#14182b; --ink:#e9ecff; --muted:#9aa3c7; --accent:#66e3ff; --good:#48e1a8; --warn:#ffd166;
+      --ink:#f7f9ff; --muted:#b9c6ff;
+      --gold:#ffdc73; --gold2:#ffcc33; --gold3:#b98a00; --blue:#0f1d47; --blue2:#0a1535; --card:#0b1f4a;
+      --good:#4ee6a3; --bad:#ff7a7a;
     }
     *{box-sizing:border-box}
-    body{margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif; color:var(--ink); background:radial-gradient(1200px 1200px at 80% -10%, #263057 0%, var(--bg) 45%) fixed;}
-    .wrap{max-width:1100px; margin:40px auto; padding:16px}
-    .header{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px}
-    .h1{font-weight:800; letter-spacing:0.3px; font-size:28px}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.06); border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,.25);}
-    .grid{display:grid; grid-template-columns: 1.1fr 1fr; gap:16px}
-    .pad{padding:16px}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--ink); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      background:url('unnamed.jpg') repeat fixed center/220px #06122b;
+    }
+    .veil{min-height:100%; backdrop-filter: blur(1px); background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.75));}
+    .wrap{max-width:1180px; margin:0 auto; padding:24px}
+
+    /* Head */
+    .title{font-size:34px; font-weight:900; letter-spacing:2px; text-transform:uppercase; color:var(--gold);
+      text-shadow:0 2px 0 #000, 0 7px 18px rgba(0,0,0,.4)}
     .sub{color:var(--muted); font-size:13px}
-    button{appearance:none; border:none; background:linear-gradient(135deg, var(--accent), #5fb4ff); color:#0b1220; font-weight:800; padding:12px 16px; border-radius:12px; cursor:pointer; transition:transform .08s ease;}
-    button:active{transform:translateY(1px)}
-    .ghost{background:#1a2140; color:var(--ink); border:1px solid rgba(255,255,255,.08)}
-    .row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
-    .wheel-wrap{position:relative; display:grid; place-items:center; padding:24px}
-    #wheel{width:100%; max-width:460px; aspect-ratio:1; background:#0a0d1a; border-radius:50%;}
-    .pin{position:absolute; top:12px; width:0; height:0; border-left:12px solid transparent; border-right:12px solid transparent; border-bottom:20px solid var(--warn); filter:drop-shadow(0 3px 6px rgba(0,0,0,.45));}
-    .center-cap{position:absolute; width:92px; height:92px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #fff, #e1e6ff 40%, #a7b8ff 60%, #4b53bf 100%); box-shadow: inset 0 0 30px rgba(0,0,0,.35), 0 6px 20px rgba(0,0,0,.35)}
-    .needle{position:absolute; top:30px; width:0; height:0}
-    .log{height:110px; overflow:auto; padding:8px 12px; background:#0c1130; border-radius:12px; border:1px solid rgba(255,255,255,.06)}
-    .tag{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#101433; border:1px solid rgba(255,255,255,.06); font-size:12px}
-    .gift-list{display:flex; flex-wrap:wrap; gap:8px}
-    .gift-list .tag{background:#0f1538}
-    .score{font-weight:800; font-size:22px}
-    .sec{margin-top:10px}
-    .puzzle{display:grid; gap:8px}
-    .word{display:flex; gap:8px; flex-wrap:wrap}
-    .letter{width:34px;height:44px; display:grid; place-items:center; font-weight:800; font-size:20px; color:#0c1230; background:#d9e4ff; border-radius:8px}
-    .letter.blank{background:#141c3f; border:1px dashed rgba(255,255,255,.15); color:transparent}
-    input[type=text]{background:#0f1538; border:1px solid rgba(255,255,255,.12); color:var(--ink); padding:10px 12px; border-radius:10px; min-width:0}
-    .footer{margin-top:18px; display:flex; justify-content:space-between; align-items:center; gap:10px}
-    .hint{font-size:12px; color:var(--muted)}
-    .overlay{position:fixed; inset:0; background:rgba(5,8,18,.75); display:none; place-items:center; padding:16px; z-index:50}
-    .modal{max-width:560px; width:100%; background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:18px}
-    .prize{font-size:18px; padding:10px 12px; border-radius:10px; background:#101433; border:1px solid rgba(255,255,255,.08)}
-    .muted{color:var(--muted)}
-    .tiny{font-size:11px; color:var(--muted)}
-    .ok{background:linear-gradient(135deg, var(--good), #9ff6c7); color:#041b13}
-    .danger{background:linear-gradient(135deg, #ff7a7a, #ffcdcd); color:#2b0a0a}
-    .sep{height:1px;background:linear-gradient(to right, transparent, rgba(255,255,255,.14), transparent); margin:12px 0}
+
+    /* Layout */
+    .grid{display:grid; grid-template-columns:1.2fr 0.9fr; gap:18px; margin-top:16px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.1); border-radius:20px; box-shadow:0 18px 60px rgba(0,0,0,.4)}
+    .pad{padding:18px}
+    .bar{display:flex; align-items:center; justify-content:space-between; gap:12px}
+    .gold{color:var(--gold)}
+    .btn{appearance:none; border:none; cursor:pointer; font-weight:900; letter-spacing:.3px; color:#1a1400; background:linear-gradient(180deg, var(--gold), var(--gold2)); border-radius:14px; padding:10px 14px; box-shadow:0 4px 0 var(--gold3), 0 10px 26px rgba(0,0,0,.3)}
+    .btn:active{transform:translateY(1px)}
+    .btn-ghost{background:linear-gradient(180deg,#142458,#0e1a44); color:var(--ink); border:1px solid rgba(255,255,255,.12)}
+
+    /* Wheel */
+    .wheel-wrap{position:relative; display:grid; place-items:center; padding:26px; border-radius:24px; background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.1)}
+    #wheel{width:100%; max-width:740px; aspect-ratio:1; background:#06112a; border-radius:50%; box-shadow:inset 0 0 50px rgba(0,0,0,.7)}
+    .pin{position:absolute; top:10px; width:0; height:0; border-left:16px solid transparent; border-right:16px solid transparent; border-bottom:26px solid var(--gold2); filter:drop-shadow(0 3px 8px rgba(0,0,0,.6))}
+    .cap{position:absolute; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #fff, #ffe9a3 40%, #ffcf4d 60%, #d2a500 100%); box-shadow: inset 0 0 30px rgba(0,0,0,.35), 0 6px 24px rgba(0,0,0,.5); display:grid; place-items:center}
+    .cap .btn{border-radius:50%; padding:18px 18px}
+
+    .panel{min-height:84px; display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .panel .rule{font-weight:800}
+    .log{margin-top:10px; height:110px; overflow:auto; padding:8px 12px; background:#0c1130; border-radius:12px; border:1px solid rgba(255,255,255,.08)}
+
+    /* Right column */
+    .qbox{min-height:210px}
+    .q{font-weight:800}
+    .word-len{opacity:.8; font-size:13px}
+    .answer{display:flex; gap:8px; margin-top:10px}
+    .answer input{flex:1; padding:12px 14px; border-radius:12px; border:2px solid transparent; background:#0f1538; color:var(--ink); font-weight:700; letter-spacing:.5px}
+    .answer.correct input{border-color:var(--good)}
+    .answer.wrong input{border-color:var(--bad)}
+    .note{font-size:12px; color:var(--muted)}
+
+    /* Intro modal */
+    .intro{position:fixed; inset:0; display:grid; place-items:center; background:rgba(7,10,24,.88); z-index:1000}
+    .intro.hide{display:none}
+    .ibox{width:min(720px,92vw); background:linear-gradient(180deg, #12265c, #0d1b46); border:1px solid rgba(255,255,255,.12); border-radius:20px; box-shadow:0 28px 90px rgba(0,0,0,.55); padding:18px}
+    .ibox h3{margin:0; color:var(--gold); text-shadow:0 1px 0 #000}
+    .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
+    .icta{display:flex; gap:10px; margin-top:12px}
+
+    /* Glow for selected points */
+    .points{font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(255,220,115,.9)}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="header">
-      <div>
-        <div class="h1">🎉 Gift Roulette — Wheel‑of‑Fortune</div>
-        <div class="sub">Spin the wheel, solve the words, rack up points, then choose a cash prize or gamble on a random gift.</div>
+  <!-- Intro -->
+  <div id="intro" class="intro">
+    <div class="ibox">
+      <h3>🎙️ Сообщение перед игрой</h3>
+      <div id="introText" class="itype"></div>
+      <div class="icta">
+        <button id="introPlay" class="btn">▶️ Воспроизвести</button>
+        <button id="introClose" class="btn btn-ghost">Закрыть</button>
       </div>
-      <div class="row">
-        <button id="shareBtn" class="ghost">🔗 Share link</button>
-        <button id="resetBtn" title="Reset progress">♻️ Reset</button>
-      </div>
-    </div>
-
-    <div class="grid">
-      <!-- LEFT: Wheel + gifts -->
-      <div class="card pad">
-        <div class="row" style="justify-content:space-between; align-items:flex-end">
-          <div>
-            <div style="font-weight:700">🎁 Gifts in the wheel</div>
-            <div class="tiny">Edit below; changes apply instantly.</div>
-          </div>
-          <div class="row">
-            <button id="spinBtn">🎡 Spin</button>
-          </div>
-        </div>
-
-        <div class="wheel-wrap">
-          <div class="pin"></div>
-          <canvas id="wheel"></canvas>
-          <div class="center-cap"></div>
-        </div>
-
-        <div class="gift-list" id="giftTags"></div>
-        <div class="sec row">
-          <input id="newGift" type="text" placeholder="Add a gift (e.g., Mechanical Keyboard)" style="flex:1" />
-          <button id="addGift" class="ghost">＋ Add</button>
-        </div>
-        <div class="sec hint">Tip: Add 3–8 gifts. The wheel colors alternate so each slice is readable.</div>
-        <div class="sec">
-          <div style="font-weight:700; margin-bottom:6px">📜 Spin log</div>
-          <div class="log" id="log"></div>
-        </div>
-      </div>
-
-      <!-- RIGHT: Puzzle + scoring -->
-      <div class="card pad">
-        <div class="row" style="justify-content:space-between; align-items:flex-end">
-          <div>
-            <div style="font-weight:700">🧩 Word Puzzle</div>
-            <div class="tiny">Solve all to unlock the final choice.</div>
-          </div>
-          <div class="row"><span class="score">⭐ <span id="score">0</span></span></div>
-        </div>
-
-        <div class="puzzle sec">
-          <div class="row" style="gap:6px">
-            <input id="secretInput" type="text" placeholder="Add a secret phrase (e.g., HAPPY BIRTHDAY)" style="flex:1" />
-            <button id="addSecret" class="ghost">＋ Add</button>
-          </div>
-          <div class="tiny">Add 3–6 phrases. Only letters A–Z are used; spaces remain visible.</div>
-
-          <div class="sep"></div>
-
-          <div id="board"></div>
-          <div class="row sec">
-            <input id="guess" type="text" maxlength="1" placeholder="Type a letter" />
-            <button id="guessBtn">✅ Guess</button>
-            <button id="skipBtn" class="ghost" title="Skip to next phrase (no points)">⏭️ Skip</button>
-          </div>
-          <div class="hint">Correct letter = +10 points · Wrong letter = −2 · Solving a full phrase = +25 bonus</div>
-        </div>
-
-        <div class="footer">
-          <div class="row">
-            <span class="tag">Solved: <strong id="solved">0</strong>/<span id="total">0</span></span>
-            <span class="tag">Current phrase: <strong id="currentIx">—</strong></span>
-          </div>
-          <button id="finalBtn" class="ok" disabled>🔓 Final choice</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="sec tiny">Made with ❤️ for your brother. Data is saved to your browser (LocalStorage).
+      <div class="note">Звук — <code>intro.mp3</code>. Текст печатается параллельно.</div>
     </div>
   </div>
 
-  <!-- Modal: Final Choice -->
-  <div class="overlay" id="finalOverlay">
-    <div class="modal">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px">
-        <div style="font-weight:800; font-size:20px">🏁 Final Choice</div>
-        <button id="closeFinal" class="ghost">✖</button>
+  <div class="veil">
+    <div class="wrap">
+      <div class="bar">
+        <div>
+          <div class="title">ПОЛЕ ЧУДЕС — мини‑шоу</div>
+          <div class="sub">Крути барабан, набирай очки и отвечай на вопросы.</div>
+        </div>
+        <div class="bar">
+          <button id="reset" class="btn btn-ghost">Сброс</button>
+        </div>
       </div>
-      <div class="sep"></div>
-      <p class="muted">You solved all phrases! Choose your prize:</p>
-      <div class="row" style="margin:8px 0 12px">
-        <button id="cashBtn" class="ok">💵 Take the cash</button>
-        <button id="superBtn" class="danger">🎰 Super‑game (random gift)</button>
+
+      <!-- Top panel -->
+      <div class="card pad panel" id="panel">
+        <div class="rule" id="rule">Правила: нажми «Крутить», дождись очков и отвечай на вопрос.</div>
+        <div>Счёт: <span id="score" class="points">0</span></div>
       </div>
-      <div id="result" class="prize" style="display:none"></div>
-      <div class="tiny" style="margin-top:10px">Host note: edit the cash amount in the code or set via URL param <code>?cash=100</code>.</div>
+
+      <div class="grid">
+        <!-- Left: Wheel -->
+        <div class="card pad">
+          <div class="wheel-wrap">
+            <div class="pin"></div>
+            <canvas id="wheel"></canvas>
+            <div class="cap"><button id="spin" class="btn">🎡 Крутить</button></div>
+          </div>
+          <div class="log" id="log"></div>
+        </div>
+
+        <!-- Right: Question / Answer -->
+        <div class="card pad qbox">
+          <div class="q" id="question">Вопрос появится после спина.</div>
+          <div class="word-len" id="length"></div>
+          <div class="answer" id="answerBox">
+            <input id="answer" type="text" placeholder="Введите слово" />
+            <button id="submit" class="btn">Ответить</button>
+          </div>
+          <div class="note">Подсказка: верный ответ подсветится <span style="color:var(--good)">зелёным</span>, неверный — <span style="color:var(--bad)">красным</span>.</div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
-    // ====== State & Persistence ======
-    const $ = s=>document.querySelector(s);
-    const $$ = s=>document.querySelectorAll(s);
+    // ===== Intro (audio + typewriter)
+    const introTextFixed = `Здравствуй, Евгений. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан.
+Правила очень просты... мм получай удовольствие и выигрывай призы`;
+    const introAudio = new Audio('intro.mp3');
+    const intro = document.getElementById('intro');
+    const introPlay = document.getElementById('introPlay');
+    const introClose = document.getElementById('introClose');
+    const introTextEl = document.getElementById('introText');
 
-    const LS_KEY = 'gift-wheel-v1';
-    const defaultGifts = [
-      'Noise‑canceling Headphones',
-      'Mechanical Keyboard',
-      'Smart Lamp',
-      'Tech Book Voucher',
-      'Coffee Grinder',
-      'Gym Class Pack'
-    ];
-    const defaultPhrases = [
-      'HAPPY BIRTHDAY',
-      'BEST BROTHER',
-      'MAKE A WISH'
-    ];
-
-    let state = {
-      gifts: [...defaultGifts],
-      phrases: [...defaultPhrases],
-      current: 0,
-      solved: new Set(),
-      guessed: new Set(),
-      score: 0,
-      spins: []
-    };
-
-    function save(){ localStorage.setItem(LS_KEY, JSON.stringify({
-      gifts: state.gifts, phrases: state.phrases, current: state.current,
-      solved:[...state.solved], guessed:[...state.guessed], score: state.score, spins: state.spins
-    })); }
-
-    function load(){
-      const raw = localStorage.getItem(LS_KEY);
-      if(!raw) return;
-      try{
-        const s = JSON.parse(raw);
-        if(Array.isArray(s.gifts)) state.gifts = s.gifts;
-        if(Array.isArray(s.phrases)) state.phrases = s.phrases;
-        if(typeof s.current==='number') state.current = Math.min(Math.max(0, s.current), state.phrases.length-1);
-        state.solved = new Set(s.solved||[]);
-        state.guessed = new Set(s.guessed||[]);
-        state.score = Number.isFinite(s.score)? s.score: 0;
-        state.spins = Array.isArray(s.spins)? s.spins: [];
-      }catch(e){ console.warn('Load failed', e); }
+    function typewrite(text, el, speed=24){
+      return new Promise(res=>{ el.textContent=''; let i=0; const t=setInterval(()=>{ el.textContent += text[i++]||''; if(i>=text.length){ clearInterval(t); res(); } }, speed); });
     }
 
-    // URL params (cash amount)
-    const params = new URLSearchParams(location.search);
-    const CASH = Number(params.get('cash')) || 100; // default cash amount
+    introPlay.addEventListener('click', async ()=>{
+      introPlay.disabled = true;
+      try{ await introAudio.play(); }catch(e){}
+      await typewrite(introTextFixed, introTextEl);
+    });
+    introClose.addEventListener('click', ()=>{ intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){} });
 
-    load();
-
-    // ====== Wheel ======
-    const wheel = $('#wheel');
+    // ===== Wheel logic
+    const points = [100,200,300,400,500,600,700,800,900,1000];
+    const wheel = document.getElementById('wheel');
     const ctx = wheel.getContext('2d');
+    let angle=0, vel=0, spinning=false, selectedIndex=null;
 
-    function drawWheel(){
+    function drawWheel(a=0){
       const W = wheel.width = wheel.clientWidth * devicePixelRatio;
       const H = wheel.height = wheel.clientHeight * devicePixelRatio;
-      const R = Math.min(W,H)/2 - 8*devicePixelRatio;
-      const cx = W/2, cy = H/2;
-      const n = Math.max(1, state.gifts.length);
-      const arc = 2*Math.PI/n;
-      ctx.clearRect(0,0,W,H);
-      ctx.save();
-      ctx.translate(cx, cy);
-      for(let i=0;i<n;i++){
-        ctx.beginPath();
-        ctx.moveTo(0,0);
-        ctx.arc(0,0,R, i*arc, (i+1)*arc);
-        const hue = (i*360/n);
-        ctx.fillStyle = `hsl(${hue} 70% 55% / .9)`;
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,.25)';
-        ctx.lineWidth = 2*devicePixelRatio;
-        ctx.stroke();
-
-        // text
-        ctx.save();
-        ctx.rotate(i*arc + arc/2);
-        ctx.fillStyle = '#0a0d1a';
-        ctx.font = `${Math.max(16*devicePixelRatio, R*0.09)}px system-ui, -apple-system, Segoe UI, Roboto`;
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        const label = (state.gifts[i]||'').slice(0,26);
-        ctx.translate(R*0.62,0);
-        wrapText(ctx, label, 0,0, R*0.55, 1.2);
-        ctx.restore();
-      }
-      ctx.restore();
-    }
-
-    function wrapText(ctx, text, x, y, maxWidth, lineHeight){
-      const words = text.split(' ');
-      let line = '', yy=y;
-      for(let n=0;n<words.length;n++){
-        const test = line + (line? ' ':'') + words[n];
-        if(ctx.measureText(test).width > maxWidth && n>0){
-          ctx.fillText(line, x, yy); yy += lineHeight*ctx.measureText('M').width;
-          line = words[n];
-        } else line = test;
-      }
-      ctx.fillText(line, x, yy);
-    }
-
-    let spinning = false, angle = 0, vel = 0;
-    function spin(){
-      if(spinning || state.gifts.length===0) return;
-      spinning = true;
-      vel = 0.35 + Math.random()*0.25; // initial speed
-      animate();
-    }
-
-    function animate(){
-      if(!spinning) return;
-      angle = (angle + vel)%(Math.PI*2);
-      vel *= 0.985; // friction
-      drawWheelRotation(angle);
-      if(vel < 0.002){
-        spinning = false;
-        finalizeSpin();
-        return;
-      }
-      requestAnimationFrame(animate);
-    }
-
-    function drawWheelRotation(a){
-      const W = wheel.width, H = wheel.height;
-      const cx=W/2, cy=H/2;
-      const n = Math.max(1, state.gifts.length);
-      const arc = 2*Math.PI/n;
-      const R = Math.min(W,H)/2 - 8*devicePixelRatio;
-      ctx.clearRect(0,0,W,H);
-      ctx.save();
-      ctx.translate(cx,cy); ctx.rotate(a);
+      const cx=W/2, cy=H/2; const R=Math.min(W,H)/2 - 12*devicePixelRatio;
+      const n = points.length; const arc = 2*Math.PI/n;
+      ctx.clearRect(0,0,W,H); ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
       for(let i=0;i<n;i++){
         ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,i*arc,(i+1)*arc);
-        const hue=(i*360/n);
-        ctx.fillStyle=`hsl(${hue} 70% 55% / .9)`; ctx.fill();
-        ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=2*devicePixelRatio; ctx.stroke();
-        ctx.save(); ctx.rotate(i*arc+arc/2); ctx.fillStyle='#0a0d1a';
-        ctx.font=`${Math.max(16*devicePixelRatio,R*0.09)}px system-ui, -apple-system`;
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        const label=(state.gifts[i]||'').slice(0,26);
-        ctx.translate(R*0.62,0); wrapText(ctx,label,0,0,R*0.55,1.2); ctx.restore();
+        ctx.fillStyle = (i%2? '#103079':'#142d63'); ctx.fill();
+        ctx.strokeStyle = '#0a1e4f'; ctx.lineWidth = 3*devicePixelRatio; ctx.stroke();
+        // number at rim
+        ctx.save(); ctx.rotate(i*arc + arc/2); ctx.fillStyle = '#ffdc73';
+        ctx.font = `${Math.max(18*devicePixelRatio,R*0.085)}px system-ui`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.translate(R*0.75,0); ctx.rotate(Math.PI/2);
+        ctx.fillText(points[i].toString(),0,0);
+        ctx.restore();
+      }
+      // bulbs
+      const bulbs = 72;
+      for(let i=0;i<bulbs;i++){
+        const ang = a + (i/bulbs)*Math.PI*2;
+        const bx = Math.cos(ang)*(R+10*devicePixelRatio);
+        const by = Math.sin(ang)*(R+10*devicePixelRatio);
+        ctx.beginPath(); ctx.arc(bx,by,4*devicePixelRatio,0,Math.PI*2);
+        const on = (Math.floor(Date.now()/120)%2===i%2);
+        ctx.fillStyle = on? 'rgba(255,240,150,.95)':'rgba(255,210,77,.85)';
+        ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.stroke();
       }
       ctx.restore();
     }
 
-    function finalizeSpin(){
-      const n = Math.max(1, state.gifts.length);
-      const arc = 2*Math.PI/n;
-      const pinAngle = 0; // top (because the pointer triangle is at 12 o'clock)
-      // Which slice is at pinAngle after rotation? We used rotation by "angle".
-      let ix = Math.floor(((Math.PI*2 - (angle % (Math.PI*2))) % (Math.PI*2)) / arc);
-      if(ix<0) ix=0; if(ix>=n) ix=n-1;
-      const gift = state.gifts[ix];
-      log(`🎯 Landed on: <b>${escapeHTML(gift)}</b>`);
-      state.spins.push(gift); save();
+    function spin(){ if(spinning) return; spinning=true; selectedIndex=null; vel=0.36+Math.random()*0.28; animate(); }
+    function animate(){ angle=(angle+vel)%(Math.PI*2); vel*=0.985; drawWheel(angle); if(vel>0.002) requestAnimationFrame(animate); else { spinning=false; finalize(); } }
+    function finalize(){
+      const n=points.length; const arc=2*Math.PI/n; selectedIndex = Math.floor(((Math.PI*2 - (angle%(Math.PI*2)))%(Math.PI*2))/arc); if(selectedIndex<0) selectedIndex=0; if(selectedIndex>=n) selectedIndex=n-1;
+      const p = points[selectedIndex];
+      log(`🎯 Выпало: <b>${p}</b> очков`);
+      document.getElementById('rule').innerHTML = `Твои очки: <span class="points">${p}</span>. Ответь на вопрос!`;
+      showQuestion();
     }
 
-    function log(html){
-      const el = document.createElement('div');
-      el.innerHTML = `<span class="tiny">${new Date().toLocaleTimeString()}</span> ${html}`;
-      $('#log').prepend(el);
+    function log(html){ const box=document.getElementById('log'); const d=document.createElement('div'); d.innerHTML = `<span class="note">${new Date().toLocaleTimeString()}</span> ${html}`; box.prepend(d); }
+
+    document.getElementById('spin').addEventListener('click', spin);
+    window.addEventListener('resize', ()=> drawWheel(angle));
+    drawWheel(angle);
+
+    // ===== Questions
+    const rounds = [
+      { q: 'Что нам нужно от вас?', a: 'БУКВА' },
+      { q: 'Любимая игра у Якубовича?', a: 'ПОЛЕЧУДЕС' },
+      { q: 'Что крутят в нашей игре?', a: 'БАРАБАН' },
+      { q: 'Чем отмечаем сегодня?', a: 'ПРАЗДНИК' },
+      { q: 'Что желаем имениннику?', a: 'СЧАСТЬЯ' }
+    ];
+    let round = 0; let score = 0;
+
+    function showQuestion(){
+      const r = rounds[round];
+      document.getElementById('question').textContent = r ? `Вопрос: ${r.q}` : 'Игра окончена! 🎉';
+      document.getElementById('length').textContent = r ? `Слово из ${r.a.length} букв` : '';
+      const input = document.getElementById('answer'); input.value=''; input.focus();
+      document.getElementById('answerBox').classList.remove('correct','wrong');
     }
 
-    function escapeHTML(s){ return s.replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
-
-    // Gifts UI
-    function renderGifts(){
-      const c = $('#giftTags'); c.innerHTML='';
-      state.gifts.forEach((g,i)=>{
-        const tag = document.createElement('span');
-        tag.className='tag';
-        tag.innerHTML=`${escapeHTML(g)} <button data-i="${i}" class="ghost" style="padding:4px 8px">✖</button>`;
-        c.appendChild(tag);
-      });
-      $('#total').textContent = state.phrases.length;
-      drawWheel();
-    }
-
-    $('#giftTags').addEventListener('click', e=>{
-      const b = e.target.closest('button'); if(!b) return;
-      const i = Number(b.dataset.i);
-      state.gifts.splice(i,1); save(); renderGifts();
-    });
-
-    $('#addGift').onclick = ()=>{
-      const v = $('#newGift').value.trim(); if(!v) return;
-      state.gifts.push(v); $('#newGift').value=''; save(); renderGifts();
-    };
-
-    $('#spinBtn').onclick = spin;
-
-    // ====== Puzzle ======
-    function normalise(s){ return s.toUpperCase().replace(/[^A-Z ]/g,''); }
-
-    function renderBoard(){
-      const phrase = state.phrases[state.current];
-      const board = $('#board'); board.innerHTML='';
-      if(!phrase){
-        board.innerHTML = '<div class="muted">Add at least one phrase to start</div>';
-        $('#currentIx').textContent = '—';
-        return;
-      }
-      $('#currentIx').textContent = (state.current+1);
-      const row = document.createElement('div'); row.className='word';
-      for(const ch of phrase){
-        const box = document.createElement('div');
-        if(ch===' '){ box.style.width='10px'; box.style.height='10px'; box.style.background='transparent'; }
-        else{
-          const isRevealed = state.guessed.has(ch) || state.solved.has(state.current);
-          box.className='letter' + (isRevealed? '':' blank');
-          box.textContent = isRevealed ? ch : '•';
-        }
-        row.appendChild(box);
-      }
-      board.appendChild(row);
-      $('#solved').textContent = state.solved.size;
-      $('#total').textContent = state.phrases.length;
-      $('#score').textContent = state.score;
-
-      const allSolved = state.solved.size === state.phrases.length && state.phrases.length>0;
-      $('#finalBtn').disabled = !allSolved;
-    }
-
-    function addPhrase(){
-      const v = normalise($('#secretInput').value);
-      if(!v) return; state.phrases.push(v); $('#secretInput').value=''; save(); renderBoard(); drawWheel();
-    }
-
-    function guess(){
-      const inp = $('#guess');
-      const chRaw = inp.value.toUpperCase();
-      inp.value='';
-      const ch = chRaw.replace(/[^A-Z]/g,'');
-      if(!ch) return;
-      if(state.guessed.has(ch)) { log(`⚠️ Already guessed <b>${ch}</b>`); return; }
-      state.guessed.add(ch);
-      const phrase = state.phrases[state.current];
-      if(phrase.includes(ch)){
-        const count = [...phrase].filter(x=>x===ch).length;
-        state.score += 10*count;
-        log(`✅ Correct: <b>${ch}</b> (+${10*count})`);
-        // auto-solve if all letters revealed
-        const hidden = [...phrase].filter(x=> x!==' ' && !state.guessed.has(x));
-        if(hidden.length===0){ solveCurrent(); }
+    function checkAnswer(){
+      const r = rounds[round]; if(!r) return;
+      const got = document.getElementById('answer').value.trim().toUpperCase().replace(/Ё/g,'Е');
+      const need = r.a.toUpperCase().replace(/Ё/g,'Е');
+      const box = document.getElementById('answerBox');
+      if(got === need){
+        box.classList.remove('wrong'); box.classList.add('correct');
+        const p = points[selectedIndex ?? 0]; score += p; document.getElementById('score').textContent = score;
+        log('✅ Совершенно верно!');
+        round++; selectedIndex=null; setTimeout(()=>{ document.getElementById('rule').textContent='Снова крути барабан!'; document.getElementById('question').textContent='Вопрос появится после спина.'; document.getElementById('length').textContent=''; }, 800);
       } else {
-        state.score -= 2; log(`❌ Wrong: <b>${ch}</b> (-2)`);
+        box.classList.remove('correct'); box.classList.add('wrong');
+        log('❌ Неверно, попробуй ещё раз.');
       }
-      save(); renderBoard();
     }
 
-    function solveCurrent(manual=false){
-      state.solved.add(state.current);
-      if(manual) state.score += 25;
-      log(`🎊 Solved phrase #${state.current+1} ${manual? '(+25 bonus)':''}`);
-      // move to next unsolved
-      const next = state.phrases.findIndex((_,i)=>!state.solved.has(i));
-      state.current = (next===-1? state.current: next);
-      save(); renderBoard();
-    }
+    document.getElementById('submit').addEventListener('click', checkAnswer);
+    document.getElementById('answer').addEventListener('keydown', e=>{ if(e.key==='Enter') checkAnswer(); });
 
-    function skip(){
-      // move to next (no points change)
-      let i = state.current;
-      for(let step=0; step<state.phrases.length; step++){
-        i = (i+1) % state.phrases.length;
-        if(!state.solved.has(i)){ state.current=i; break; }
-      }
-      renderBoard(); save();
-    }
-
-    $('#addSecret').onclick = addPhrase;
-    $('#guessBtn').onclick = guess;
-    $('#skipBtn').onclick = skip;
-
-    // Allow manual solve by long‑press on board (host shortcut)
-    let pressTimer; $('#board').addEventListener('mousedown',()=>{
-      pressTimer = setTimeout(()=> solveCurrent(true), 1000);
-    });
-    window.addEventListener('mouseup',()=> clearTimeout(pressTimer));
-
-    // ====== Final modal ======
-    const overlay = $('#finalOverlay');
-    function openFinal(){ overlay.style.display='grid'; $('#result').style.display='none'; }
-    function closeFinal(){ overlay.style.display='none'; }
-
-    $('#finalBtn').onclick = openFinal;
-    $('#closeFinal').onclick = closeFinal;
-
-    $('#cashBtn').onclick = ()=>{
-      $('#result').style.display='block';
-      $('#result').textContent = `You chose CASH: $${CASH}! 🎉`;
-    };
-
-    $('#superBtn').onclick = ()=>{
-      const gift = state.gifts[Math.floor(Math.random()*state.gifts.length)] || 'Mystery Box';
-      $('#result').style.display='block';
-      $('#result').textContent = `SUPER‑GAME result → ${gift}! ✨`;
-    };
-
-    // ====== Share & Reset ======
-    $('#shareBtn').onclick = async ()=>{
-      const url = location.href.split('#')[0];
-      try{ await navigator.clipboard.writeText(url); alert('Link copied to clipboard!'); }catch(e){ prompt('Copy link:', url); }
-    };
-
-    $('#resetBtn').onclick = ()=>{
-      if(!confirm('Reset all progress?')) return;
-      localStorage.removeItem(LS_KEY);
-      state = {gifts:[...defaultGifts], phrases:[...defaultPhrases], current:0, solved:new Set(), guessed:new Set(), score:0, spins:[]};
-      renderGifts(); renderBoard(); drawWheel();
-    };
-
-    // ====== Init ======
-    function init(){
-      renderGifts(); renderBoard(); drawWheel();
-      window.addEventListener('resize', drawWheel);
-      log('🟣 Ready. Add gifts & phrases, spin the wheel, solve words!');
-    }
-    init();
+    document.getElementById('reset').addEventListener('click', ()=>{ score=0; round=0; angle=0; vel=0; selectedIndex=null; document.getElementById('score').textContent='0'; document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.'; document.getElementById('question').textContent='Вопрос появится после спина.'; document.getElementById('length').textContent=''; drawWheel(0); document.getElementById('log').innerHTML=''; });
   </script>
 </body>
 </html>
