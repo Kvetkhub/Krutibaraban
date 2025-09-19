@@ -63,6 +63,15 @@
     .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
     .icta{display:flex; gap:10px; margin-top:12px}
 
+    /* Result modal */
+    .modal{position:fixed; inset:0; background:rgba(5,10,25,.86); display:none; place-items:center; z-index:1500}
+    .modal.show{display:grid}
+    .modal-card{width:min(720px,92vw); border-radius:20px; padding:22px; color:var(--ink);
+      background:linear-gradient(180deg,#12265c,#0d1b46);
+      border:1px solid rgba(255,255,255,.12); box-shadow:0 28px 90px rgba(0,0,0,.55); text-align:center}
+    .modal-title{margin:0 0 8px; color:var(--gold); font-weight:900}
+    .modal-text{font-weight:800; margin:6px 0 14px}
+
     /* Glow for selected points */
     .points{font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(255,220,115,.9)}
   </style>
@@ -124,6 +133,16 @@
     </div>
   </div>
 
+  <!-- Result modal -->
+  <div id="qModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <h3 class="modal-title">Результат спина</h3>
+      <div id="qScore" class="modal-text"></div>
+      <div id="qText" class="modal-text"></div>
+      <button id="qClose" class="btn">Понял ✔️</button>
+    </div>
+  </div>
+
   <script>
     // ===== Intro (audio + typewriter)
     const introTextFixed = `Здравствуй, Евгений. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан.
@@ -155,7 +174,7 @@
     const points = [100,200,300,400,500,600,700,800,900,1000];
     const wheel = document.getElementById('wheel');
     const ctx = wheel.getContext('2d');
-    let angle=0, vel=0, spinning=false, selectedIndex=null;
+    let angle=0, spinning=false, selectedIndex=null, firstSpin=true;
 
     function drawWheel(a=0){
       const W = wheel.width = wheel.clientWidth * devicePixelRatio;
@@ -195,8 +214,9 @@
       // На время прокрутки — громкость 100% и воспроизводим
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      // Ровно 20 секунд прокрутки постоянной скоростью
-      const DURATION = 20000; // мс
+      // Длительность: первый спин 20с, остальные 10с
+      const DURATION = firstSpin ? 20000 : 10000; // мс
+      firstSpin = false;
       const SPEED = 0.02;     // рад/мс (~1.15 об/сек)
       let lastTs = null; const endAt = performance.now() + DURATION;
 
@@ -221,6 +241,15 @@
       log(`🎯 Выпало: <b>${p}</b> очков`);
       document.getElementById('rule').innerHTML = `Твои очки: <span class="points">${p}</span>. Ответь на вопрос!`;
       showQuestion();
+
+      // Показать модалку через 2 секунды
+      const r = rounds[round];
+      setTimeout(()=>{
+        qScore.textContent = `Ваши баллы: ${p}`;
+        qText.textContent  = `Ваш вопрос: ${r ? r.q : 'Игра окончена! 🎉'}`;
+        qModal.classList.add('show');
+        qModal.setAttribute('aria-hidden','false');
+      }, 2000);
     }
 
     function log(html){ const box=document.getElementById('log'); const d=document.createElement('div'); d.innerHTML = `<span class="note">${new Date().toLocaleTimeString()}</span> ${html}`; box.prepend(d); }
@@ -266,14 +295,24 @@
     document.getElementById('submit').addEventListener('click', checkAnswer);
     document.getElementById('answer').addEventListener('keydown', e=>{ if(e.key==='Enter') checkAnswer(); });
 
+    // Result modal controls
+    const qModal = document.getElementById('qModal');
+    const qScore = document.getElementById('qScore');
+    const qText  = document.getElementById('qText');
+    document.getElementById('qClose').addEventListener('click',()=>{
+      qModal.classList.remove('show');
+      qModal.setAttribute('aria-hidden','true');
+    });
+
     document.getElementById('reset').addEventListener('click', ()=>{ 
       try{ spinSong.pause(); }catch(e){} 
       spinSong.currentTime=0; spinSong.volume=0.3;
-      score=0; round=0; angle=0; vel=0; selectedIndex=null; 
+      score=0; round=0; angle=0; selectedIndex=null; 
       document.getElementById('score').textContent='0'; 
       document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.'; 
       document.getElementById('question').textContent='Вопрос появится после спина.'; 
       document.getElementById('length').textContent=''; 
+      qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
       drawWheel(0); document.getElementById('log').innerHTML=''; 
     });
   </script>
