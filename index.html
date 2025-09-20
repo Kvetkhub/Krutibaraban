@@ -95,8 +95,8 @@
     <div class="wrap">
       <div class="bar">
         <div>
-          <div class="title">ПОЛЕ ЧУДЕС — мини-шоу</div>
-          <div class="sub">Крути барабан, набирай очки и отвечай на вопросы.</div>
+          <div class="title">ПОЛЕ ЧУДЕС — Юбилейное шоу</div>
+          <div class="sub">Крути барабан, отвечай на вопросы, будь счастлив, родной</div>
         </div>
         <div class="bar">
           <button id="reset" class="btn btn-ghost">Сброс</button>
@@ -146,15 +146,14 @@
 
   <script>
     // ===== Intro (audio + typewriter)
-    const introTextFixed = `Здравствуй, Евгений. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан.
-Правила очень просты... мм получай удовольствие и выигрывай призы`;
+    const introTextFixed = `Здравствуй, Евгений. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан. Правила очень просты. Получай удовольствие и выигрывай призы`;
     const introAudio = new Audio('intro.mp3');
     const intro = document.getElementById('intro');
     const introPlay = document.getElementById('introPlay');
     const introClose = document.getElementById('introClose');
     const introTextEl = document.getElementById('introText');
 
-    // Замедлили печать в 4 раза (было 24 мс → стало 96 мс на символ)
+    // медленнее (≈ в 4 раза): 96 мс/символ
     function typewrite(text, el, speed=96){
       return new Promise(res=>{
         el.textContent=''; let i=0;
@@ -227,16 +226,17 @@
 
       // Длительность: 1-й спин 20с, остальные 10с; реалистичное замедление
       const DURATION  = firstSpin ? 20000 : 10000;   // мс
-      const TURNS     = firstSpin ? 8 : 5;           // полных оборотов до сектора
+      const TURNS     = firstSpin ? 8 : 5;           // полных оборотов
       firstSpin = false;
 
       const startAngle = angle;
       const n = points.length; const arc = 2*Math.PI/n;
+
+      // заранее выбираем сектор — это гарантирует совпадение выпавшего сектора и показанных очков
       const targetIndex = Math.floor(Math.random()*n);
       const targetAngle = (2*Math.PI - (targetIndex + 0.5)*arc) % (2*Math.PI); // центр сектора под пином
       const endAngle    = targetAngle + TURNS*2*Math.PI;
 
-      // плавное замедление к концу
       const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
       const t0 = performance.now();
 
@@ -267,7 +267,6 @@
         qModal.setAttribute('aria-hidden','false');
       }, 2000);
 
-      // Подготовим текст в правой панели
       showQuestion();
     }
 
@@ -282,12 +281,13 @@
     window.addEventListener('resize', ()=> drawWheel(angle));
     drawWheel(angle);
 
-    // ===== Rounds (твои 4 вопроса)
+    // ===== Rounds (обновлено по твоему списку)
     const rounds = [
       { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
-      { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['СМЕТАНА','СМЕТАНУ'] },
-      { q: 'Как звали отца отца отца?', a: 'МИРАСИМ' },
-      { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' }
+      { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
+      { q: 'Как звали отца отца отца?', a: 'СЕМЁН' },
+      { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' },
+      { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК','ШУСТРИК'] }
     ];
     let round = 0; let score = 0;
 
