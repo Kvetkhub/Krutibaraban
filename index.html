@@ -71,6 +71,8 @@
       border:1px solid rgba(255,255,255,.12); box-shadow:0 28px 90px rgba(0,0,0,.55); text-align:center}
     .modal-title{margin:0 0 8px; color:var(--gold); font-weight:900}
     .modal-text{font-weight:800; margin:6px 0 14px}
+    .bigScore{font-weight:900; font-size:clamp(42px, 9vw, 120px); line-height:1; color:var(--gold);
+      text-shadow:0 2px 0 #000,0 10px 26px rgba(0,0,0,.35)}
 
     /* Glow for selected points */
     .points{font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(255,220,115,.9)}
@@ -94,7 +96,7 @@
     <div class="wrap">
       <div class="bar">
         <div>
-          <div class="title">ПОЛЕ ЧУДЕС — мини‑шоу</div>
+          <div class="title">ПОЛЕ ЧУДЕС — мини-шоу</div>
           <div class="sub">Крути барабан, набирай очки и отвечай на вопросы.</div>
         </div>
         <div class="bar">
@@ -136,8 +138,8 @@
   <!-- Result modal -->
   <div id="qModal" class="modal" aria-hidden="true">
     <div class="modal-card">
-      <h3 class="modal-title">Результат спина</h3>
-      <div id="qScore" class="modal-text"></div>
+      <h3 class="modal-title">Твои баллы</h3>
+      <div id="qScore" class="modal-text bigScore"></div>
       <div id="qText" class="modal-text"></div>
       <button id="qClose" class="btn">Понял ✔️</button>
     </div>
@@ -154,7 +156,13 @@
     const introTextEl = document.getElementById('introText');
 
     function typewrite(text, el, speed=24){
-      return new Promise(res=>{ el.textContent=''; let i=0; const t=setInterval(()=>{ el.textContent += text[i++]||''; if(i>=text.length){ clearInterval(t); res(); } }, speed); });
+      return new Promise(res=>{
+        el.textContent=''; let i=0;
+        const t=setInterval(()=>{
+          el.textContent += text[i++]||'';
+          if(i>=text.length){ clearInterval(t); res(); }
+        }, speed);
+      });
     }
 
     introPlay.addEventListener('click', async ()=>{
@@ -162,7 +170,9 @@
       try{ await introAudio.play(); }catch(e){}
       await typewrite(introTextFixed, introTextEl);
     });
-    introClose.addEventListener('click', ()=>{ intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){} });
+    introClose.addEventListener('click', ()=>{
+      intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){}
+    });
 
     // ===== Spin music (idle 30%, spin 100%)
     const spinSong = new Audio('song.mp3');
@@ -172,12 +182,12 @@
 
     // ===== Wheel logic
     const points = [100,200,300,400,500,600,700,800,900,1000];
-    const wheel = document.getElementById('wheel');
-    const ctx = wheel.getContext('2d');
-    let angle=0, spinning=false, selectedIndex=null, firstSpin=true;
+    const wheel  = document.getElementById('wheel');
+    const ctx    = wheel.getContext('2d');
+    let angle=0, spinning=false, firstSpin=true;
 
     function drawWheel(a=0){
-      const W = wheel.width = wheel.clientWidth * devicePixelRatio;
+      const W = wheel.width  = wheel.clientWidth  * devicePixelRatio;
       const H = wheel.height = wheel.clientHeight * devicePixelRatio;
       const cx=W/2, cy=H/2; const R=Math.min(W,H)/2 - 12*devicePixelRatio;
       const n = points.length; const arc = 2*Math.PI/n;
@@ -188,7 +198,8 @@
         ctx.strokeStyle = '#0a1e4f'; ctx.lineWidth = 3*devicePixelRatio; ctx.stroke();
         // number at rim
         ctx.save(); ctx.rotate(i*arc + arc/2); ctx.fillStyle = '#ffdc73';
-        ctx.font = `${Math.max(18*devicePixelRatio,R*0.085)}px system-ui`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.font = `${Math.max(18*devicePixelRatio,R*0.085)}px system-ui`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.translate(R*0.75,0); ctx.rotate(Math.PI/2);
         ctx.fillText(points[i].toString(),0,0);
         ctx.restore();
@@ -208,70 +219,82 @@
     }
 
     function spin(){
-      if(spinning) return; 
-      spinning = true; selectedIndex = null;
+      if(spinning) return;
+      spinning = true;
 
-      // На время прокрутки — громкость 100% и воспроизводим
+      // Музыка — 100% на время спина
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      // Длительность: первый спин 20с, остальные 10с
-      const DURATION = firstSpin ? 20000 : 10000; // мс
+      // Длительность: 1-й спин 20с, остальные 10с; реалистичное замедление
+      const DURATION  = firstSpin ? 20000 : 10000;   // мс
+      const TURNS     = firstSpin ? 8 : 5;           // полных оборотов до сектора
       firstSpin = false;
-      const SPEED = 0.02;     // рад/мс (~1.15 об/сек)
-      let lastTs = null; const endAt = performance.now() + DURATION;
+
+      const startAngle = angle;
+      const n = points.length; const arc = 2*Math.PI/n;
+      const targetIndex = Math.floor(Math.random()*n);
+      const targetAngle = (2*Math.PI - (targetIndex + 0.5)*arc) % (2*Math.PI); // центр сектора под пином
+      const endAngle    = targetAngle + TURNS*2*Math.PI;
+
+      // плавное замедление к концу
+      const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+      const t0 = performance.now();
 
       function step(ts){
-        if(!lastTs) lastTs = ts;
-        const dt = ts - lastTs; lastTs = ts;
-        angle = (angle + SPEED * dt) % (Math.PI*2);
+        const t = Math.min(1, (ts - t0) / DURATION);
+        const eased = easeOutCubic(t);
+        angle = startAngle + (endAngle - startAngle) * eased;
         drawWheel(angle);
-        if(ts < endAt){ requestAnimationFrame(step); }
-        else { spinning = false; finalize(); }
+        if(t < 1) requestAnimationFrame(step); else { spinning=false; finalize(targetIndex); }
       }
       requestAnimationFrame(step);
     }
 
-    function finalize(){
+    function finalize(idx){
       // После остановки — трек остаётся играть на 30%
       try{ spinSong.volume = 0.3; if (spinSong.paused) spinSong.play(); }catch(e){}
-      const n=points.length; const arc=2*Math.PI/n; 
-      selectedIndex = Math.floor(((Math.PI*2 - (angle%(Math.PI*2)))%(Math.PI*2))/arc); 
-      if(selectedIndex<0) selectedIndex=0; if(selectedIndex>=n) selectedIndex=n-1;
-      const p = points[selectedIndex];
+      const p = points[idx];
+
       log(`🎯 Выпало: <b>${p}</b> очков`);
       document.getElementById('rule').innerHTML = `Твои очки: <span class="points">${p}</span>. Ответь на вопрос!`;
-      showQuestion();
 
-      // Показать модалку через 2 секунды
+      // Показать модалку через 2 секунды с текущим вопросом
       const r = rounds[round];
       setTimeout(()=>{
-        qScore.textContent = `Ваши баллы: ${p}`;
-        qText.textContent  = `Ваш вопрос: ${r ? r.q : 'Игра окончена! 🎉'}`;
+        document.getElementById('qScore').textContent = `${p}`;
+        document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
         qModal.classList.add('show');
         qModal.setAttribute('aria-hidden','false');
       }, 2000);
+
+      // Подготовим текст в правой панели
+      showQuestion();
     }
 
-    function log(html){ const box=document.getElementById('log'); const d=document.createElement('div'); d.innerHTML = `<span class="note">${new Date().toLocaleTimeString()}</span> ${html}`; box.prepend(d); }
+    function log(html){
+      const box=document.getElementById('log');
+      const d=document.createElement('div');
+      d.innerHTML = `<span class="note">${new Date().toLocaleTimeString()}</span> ${html}`;
+      box.prepend(d);
+    }
 
     document.getElementById('spin').addEventListener('click', spin);
     window.addEventListener('resize', ()=> drawWheel(angle));
     drawWheel(angle);
 
-    // ===== Questions
+    // ===== Rounds (впиши сюда свои 4 вопроса и ответы в ВЕРХНЕМ РЕГИСТРЕ)
     const rounds = [
       { q: 'Что нам нужно от вас?', a: 'БУКВА' },
       { q: 'Любимая игра у Якубовича?', a: 'ПОЛЕЧУДЕС' },
       { q: 'Что крутят в нашей игре?', a: 'БАРАБАН' },
-      { q: 'Чем отмечаем сегодня?', a: 'ПРАЗДНИК' },
-      { q: 'Что желаем имениннику?', a: 'СЧАСТЬЯ' }
+      { q: 'Чем отмечаем сегодня?', a: 'ПРАЗДНИК' }
     ];
     let round = 0; let score = 0;
 
     function showQuestion(){
       const r = rounds[round];
       document.getElementById('question').textContent = r ? `Вопрос: ${r.q}` : 'Игра окончена! 🎉';
-      document.getElementById('length').textContent = r ? `Слово из ${r.a.length} букв` : '';
+      document.getElementById('length').textContent  = r ? `Слово из ${r.a.length} букв` : '';
       const input = document.getElementById('answer'); input.value=''; input.focus();
       document.getElementById('answerBox').classList.remove('correct','wrong');
     }
@@ -279,13 +302,21 @@
     function checkAnswer(){
       const r = rounds[round]; if(!r) return;
       const got = document.getElementById('answer').value.trim().toUpperCase().replace(/Ё/g,'Е');
-      const need = r.a.toUpperCase().replace(/Ё/g,'Е');
+      const need= r.a.toUpperCase().replace(/Ё/g,'Е');
       const box = document.getElementById('answerBox');
+
       if(got === need){
         box.classList.remove('wrong'); box.classList.add('correct');
-        const p = points[selectedIndex ?? 0]; score += p; document.getElementById('score').textContent = score;
+        const p = parseInt(document.getElementById('qScore').textContent || '0', 10);
+        score += isNaN(p) ? 0 : p; // добавляем очки из текущего спина
+        document.getElementById('score').textContent = score;
         log('✅ Совершенно верно!');
-        round++; selectedIndex=null; setTimeout(()=>{ document.getElementById('rule').textContent='Снова крути барабан!'; document.getElementById('question').textContent='Вопрос появится после спина.'; document.getElementById('length').textContent=''; }, 800);
+        round++;
+        setTimeout(()=>{
+          document.getElementById('rule').textContent = 'Снова крути барабан!';
+          document.getElementById('question').textContent = 'Вопрос появится после спина.';
+          document.getElementById('length').textContent = '';
+        }, 600);
       } else {
         box.classList.remove('correct'); box.classList.add('wrong');
         log('❌ Неверно, попробуй ещё раз.');
@@ -297,23 +328,22 @@
 
     // Result modal controls
     const qModal = document.getElementById('qModal');
-    const qScore = document.getElementById('qScore');
-    const qText  = document.getElementById('qText');
     document.getElementById('qClose').addEventListener('click',()=>{
       qModal.classList.remove('show');
       qModal.setAttribute('aria-hidden','true');
+      document.getElementById('answer').focus();
     });
 
-    document.getElementById('reset').addEventListener('click', ()=>{ 
-      try{ spinSong.pause(); }catch(e){} 
+    document.getElementById('reset').addEventListener('click', ()=>{
+      try{ spinSong.pause(); }catch(e){}
       spinSong.currentTime=0; spinSong.volume=0.3;
-      score=0; round=0; angle=0; selectedIndex=null; 
-      document.getElementById('score').textContent='0'; 
-      document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.'; 
-      document.getElementById('question').textContent='Вопрос появится после спина.'; 
-      document.getElementById('length').textContent=''; 
+      score=0; round=0; angle=0;
+      document.getElementById('score').textContent='0';
+      document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.';
+      document.getElementById('question').textContent='Вопрос появится после спина.';
+      document.getElementById('length').textContent='';
       qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
-      drawWheel(0); document.getElementById('log').innerHTML=''; 
+      drawWheel(0); document.getElementById('log').innerHTML='';
     });
   </script>
 </body>
