@@ -82,13 +82,12 @@
   <!-- Intro -->
   <div id="intro" class="intro">
     <div class="ibox">
-      <h3>🎙️ Сообщение перед игрой</h3>
+      <h3>🎙️ Приветствие нашего уважаемого гостя — Евгена</h3>
       <div id="introText" class="itype"></div>
       <div class="icta">
         <button id="introPlay" class="btn">▶️ Воспроизвести</button>
         <button id="introClose" class="btn btn-ghost">Закрыть</button>
       </div>
-      <div class="note">Звук — <code>intro.mp3</code>. Текст печатается параллельно.</div>
     </div>
   </div>
 
@@ -155,7 +154,8 @@
     const introClose = document.getElementById('introClose');
     const introTextEl = document.getElementById('introText');
 
-    function typewrite(text, el, speed=24){
+    // Замедлили печать в 4 раза (было 24 мс → стало 96 мс на символ)
+    function typewrite(text, el, speed=96){
       return new Promise(res=>{
         el.textContent=''; let i=0;
         const t=setInterval(()=>{
@@ -291,13 +291,8 @@
     ];
     let round = 0; let score = 0;
 
-    // Нормализация и проверка с учётом вариантов
-    function normalizeRu(s){
-      return s.trim().toUpperCase().replace(/Ё/g,'Е');
-    }
-    function getAcceptList(a){
-      return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)];
-    }
+    function normalizeRu(s){ return s.trim().toUpperCase().replace(/Ё/g,'Е'); }
+    function getAcceptList(a){ return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)]; }
 
     function showQuestion(){
       const r = rounds[round];
