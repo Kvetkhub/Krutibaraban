@@ -282,34 +282,50 @@
     window.addEventListener('resize', ()=> drawWheel(angle));
     drawWheel(angle);
 
-    // ===== Rounds (впиши сюда свои 4 вопроса и ответы в ВЕРХНЕМ РЕГИСТРЕ)
+    // ===== Rounds (твои 4 вопроса)
     const rounds = [
-      { q: 'Что нам нужно от вас?', a: 'БУКВА' },
-      { q: 'Любимая игра у Якубовича?', a: 'ПОЛЕЧУДЕС' },
-      { q: 'Что крутят в нашей игре?', a: 'БАРАБАН' },
-      { q: 'Чем отмечаем сегодня?', a: 'ПРАЗДНИК' }
+      { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
+      { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['СМЕТАНА','СМЕТАНУ'] },
+      { q: 'Как звали отца отца отца?', a: 'МИРАСИМ' },
+      { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' }
     ];
     let round = 0; let score = 0;
 
+    // Нормализация и проверка с учётом вариантов
+    function normalizeRu(s){
+      return s.trim().toUpperCase().replace(/Ё/g,'Е');
+    }
+    function getAcceptList(a){
+      return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)];
+    }
+
     function showQuestion(){
       const r = rounds[round];
-      document.getElementById('question').textContent = r ? `Вопрос: ${r.q}` : 'Игра окончена! 🎉';
-      document.getElementById('length').textContent  = r ? `Слово из ${r.a.length} букв` : '';
+      if(!r){
+        document.getElementById('question').textContent = 'Игра окончена! 🎉';
+        document.getElementById('length').textContent = '';
+        return;
+      }
+      document.getElementById('question').textContent = `Вопрос: ${r.q}`;
+      const firstAns = Array.isArray(r.a) ? r.a[0] : r.a;
+      document.getElementById('length').textContent  = `Слово из ${normalizeRu(firstAns).length} букв`;
       const input = document.getElementById('answer'); input.value=''; input.focus();
       document.getElementById('answerBox').classList.remove('correct','wrong');
     }
 
     function checkAnswer(){
       const r = rounds[round]; if(!r) return;
-      const got = document.getElementById('answer').value.trim().toUpperCase().replace(/Ё/g,'Е');
-      const need= r.a.toUpperCase().replace(/Ё/g,'Е');
-      const box = document.getElementById('answerBox');
+      const got  = normalizeRu(document.getElementById('answer').value);
+      const list = getAcceptList(r.a);
+      const box  = document.getElementById('answerBox');
 
-      if(got === need){
+      if(list.includes(got)){
         box.classList.remove('wrong'); box.classList.add('correct');
         const p = parseInt(document.getElementById('qScore').textContent || '0', 10);
-        score += isNaN(p) ? 0 : p; // добавляем очки из текущего спина
-        document.getElementById('score').textContent = score;
+        if(!isNaN(p)){
+          score += p;
+          document.getElementById('score').textContent = score;
+        }
         log('✅ Совершенно верно!');
         round++;
         setTimeout(()=>{
