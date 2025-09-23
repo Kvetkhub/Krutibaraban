@@ -121,7 +121,7 @@
 
         <!-- Right: Question / Answer -->
         <div class="card pad qbox">
-          <div class="q" id="question">Вопрос появится после спина.</div>
+          <div class="q" id="question">Вопрос появится после барабана.</div>
           <div class="word-len" id="length"></div>
           <div class="answer" id="answerBox">
             <input id="answer" type="text" placeholder="Введите слово" />
@@ -152,7 +152,6 @@
     const introClose = document.getElementById('introClose');
     const introTextEl = document.getElementById('introText');
 
-    // медленнее (≈ в 4 раза): 96 мс/символ
     function typewrite(text, el, speed=96){
       return new Promise(res=>{
         el.textContent=''; let i=0;
@@ -179,6 +178,7 @@
     const winSfx2  = new Audio('pole_word_1996.mp3');
 
     // ===== Wheel logic
+    const TAU = Math.PI*2;
     const points = [100,200,300,400,500,600,700,800,900,1000];
     const wheel  = document.getElementById('wheel');
     const ctx    = wheel.getContext('2d');
@@ -188,7 +188,7 @@
       const W = wheel.width  = wheel.clientWidth  * devicePixelRatio;
       const H = wheel.height = wheel.clientHeight * devicePixelRatio;
       const cx=W/2, cy=H/2; const R=Math.min(W,H)/2 - 12*devicePixelRatio;
-      const n = points.length; const arc = 2*Math.PI/n;
+      const n = points.length; const arc = TAU/n;
       ctx.clearRect(0,0,W,H); ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
       for(let i=0;i<n;i++){
         ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,i*arc,(i+1)*arc);
@@ -205,10 +205,10 @@
       // bulbs (подсветка)
       const bulbs = 72;
       for(let i=0;i<bulbs;i++){
-        const ang = a + (i/bulbs)*Math.PI*2;
+        const ang = a + (i/bulbs)*TAU;
         const bx = Math.cos(ang)*(R+10*devicePixelRatio);
         const by = Math.sin(ang)*(R+10*devicePixelRatio);
-        ctx.beginPath(); ctx.arc(bx,by,4*devicePixelRatio,0,Math.PI*2);
+        ctx.beginPath(); ctx.arc(bx,by,4*devicePixelRatio,0,TAU);
         const on = (Math.floor(Date.now()/120)%2===i%2);
         ctx.fillStyle = on? 'rgba(255,240,150,.95)':'rgba(255,210,77,.85)';
         ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.stroke();
@@ -226,15 +226,24 @@
       const TURNS     = firstSpin ? 8 : 5;
       firstSpin = false;
 
+      // нормализуем текущий угол, чтобы избежать накопления больших значений
+      angle = ((angle % TAU) + TAU) % TAU;
       const startAngle = angle;
-      const n = points.length; const arc = 2*Math.PI/n;
 
-      // выбираем сектор заранее — ориентир верхняя стрелка
+      const n = points.length; const arc = TAU/n;
+
+      // выбираем сектор заранее — ориентир верхняя стрелка (направление -PI/2)
       const targetIndex = Math.floor(Math.random()*n);
-      const sectorCenter = (targetIndex + 0.5) * arc;
-      // верх — это -PI/2 в канвасе
-      const targetAngle  = -Math.PI/2 - sectorCenter;
-      const endAngle     = targetAngle + TURNS*2*Math.PI;
+      const sectorCenter = (targetIndex + 0.5) * arc;           // центр сектора в системе колеса
+      const pointerAngle = -Math.PI/2;                           // вверх
+      const desiredAngle = ((pointerAngle - sectorCenter) % TAU + TAU) % TAU;
+
+      // считаем положительный сдвиг от текущего угла к желаемому
+      const current = startAngle;
+      let deltaToTarget = desiredAngle - (current % TAU);
+      if (deltaToTarget <= 0) deltaToTarget += TAU;
+
+      const endAngle = startAngle + deltaToTarget + TURNS*TAU;
 
       const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
       const t0 = performance.now();
@@ -284,7 +293,7 @@
       { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
       { q: 'Как звали отца отца отца?', a: 'СЕМЁН' },
       { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' },
-      { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['КОТ','КОТИК'] }
+      { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК','ШУСТРИКА'] }
     ];
     let round = 0; let score = 0;
 
@@ -303,6 +312,32 @@
       document.getElementById('length').textContent  = `Слово из ${normalizeRu(firstAns).length} букв`;
       const input = document.getElementById('answer'); input.value=''; input.focus();
       document.getElementById('answerBox').classList.remove('correct','wrong');
+    }
+
+    function launchConfetti(){
+      const c=document.createElement('canvas'); c.className='confetti'; document.body.appendChild(c);
+      const cx=c.getContext('2d'); const DPR=window.devicePixelRatio||1;
+      let W=innerWidth, H=innerHeight; c.width=W*DPR; c.height=H*DPR; cx.scale(DPR,DPR);
+      const parts=[...Array(140)].map(()=>({
+        x:Math.random()*W, y:-20-Math.random()*H*0.3,
+        vx:-2+Math.random()*4, vy:2+Math.random()*4,
+        rot:Math.random()*Math.PI, vr:-0.2+Math.random()*0.4,
+        life:120+Math.random()*80, size:5+Math.random()*5,
+        hue:Math.random()*360
+      }));
+      function draw(){
+        cx.clearRect(0,0,W,H);
+        parts.forEach(p=>{
+          p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life--;
+          cx.save(); cx.translate(p.x,p.y); cx.rotate(p.rot);
+          cx.fillStyle=`hsl(${p.hue},85%,60%)`;
+          cx.fillRect(-p.size/2,-p.size/2,p.size,p.size);
+          cx.restore();
+        });
+        if(parts.some(p=>p.life>0)) requestAnimationFrame(draw); else c.remove();
+      }
+      draw();
+      window.addEventListener('resize', ()=>{ W=innerWidth; H=innerHeight; c.width=W*DPR; c.height=H*DPR; cx.scale(DPR,DPR); }, {once:true});
     }
 
     function checkAnswer(){
@@ -325,7 +360,7 @@
         round++;
         setTimeout(()=>{
           document.getElementById('rule').textContent = 'Снова крути барабан!';
-          document.getElementById('question').textContent = 'Вопрос появится после спина.';
+          document.getElementById('question').textContent = 'Вопрос появится после барабана.';
           document.getElementById('length').textContent = '';
         }, 600);
       } else {
@@ -352,38 +387,11 @@
       score=0; round=0; angle=0;
       document.getElementById('score').textContent='0';
       document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.';
-      document.getElementById('question').textContent='Вопрос появится после спина.';
+      document.getElementById('question').textContent='Вопрос появится после барабана.';
       document.getElementById('length').textContent='';
       qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
       drawWheel(0); document.getElementById('log').innerHTML='';
     });
-
-    // ===== Confetti
-    function launchConfetti(){
-      const c=document.createElement('canvas'); c.className='confetti'; document.body.appendChild(c);
-      const cx=c.getContext('2d'); const DPR=window.devicePixelRatio||1;
-      let W=innerWidth, H=innerHeight; c.width=W*DPR; c.height=H*DPR; cx.scale(DPR,DPR);
-      const parts=[...Array(140)].map(()=>({
-        x:Math.random()*W, y:-20-Math.random()*H*0.3,
-        vx:-2+Math.random()*4, vy:2+Math.random()*4,
-        rot:Math.random()*Math.PI, vr:-0.2+Math.random()*0.4,
-        life:120+Math.random()*80, size:5+Math.random()*5,
-        hue:Math.random()*360
-      }));
-      function draw(){
-        cx.clearRect(0,0,W,H);
-        parts.forEach(p=>{
-          p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life--;
-          cx.save(); cx.translate(p.x,p.y); cx.rotate(p.rot);
-          cx.fillStyle=`hsl(${p.hue},85%,60%)`;
-          cx.fillRect(-p.size/2,-p.size/2,p.size,p.size);
-          cx.restore();
-        });
-        if(parts.some(p=>p.life>0)) requestAnimationFrame(draw); else c.remove();
-      }
-      draw();
-      window.addEventListener('resize', ()=>{ W=innerWidth; H=innerHeight; c.width=W*DPR; c.height=H*DPR; cx.scale(DPR,DPR); }, {once:true});
-    }
   </script>
 </body>
 </html>
