@@ -61,7 +61,7 @@
     .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
     .icta{display:flex; gap:10px; margin-top:12px}
 
-    /* Result modal (выпавшие очки + вопрос) */
+    /* Result modal */
     .modal{position:fixed; inset:0; background:rgba(5,10,25,.86); display:none; place-items:center; z-index:1500}
     .modal.show{display:grid}
     .modal-card{width:min(720px,92vw); border-radius:20px; padding:22px; color:var(--ink);
@@ -164,7 +164,6 @@
       <h3 class="final-title">🏆 Выбор подарков</h3>
       <p id="finalIntro" class="sub"></p>
       <div class="pill">Бюджет: <b id="budget"></b> очков • Выбрано: <b id="spent">0</b></div>
-      <div class="pill">Можно выбрать: 1 × «Максимум», до 2 × «Половина», до 3 × «Треть»</div>
 
       <div id="giftList" class="gift-grid"></div>
 
@@ -180,7 +179,7 @@
   </div>
 
   <script>
-    /* ===== Intro (audio + typewriter) — без зависаний ===== */
+    /* ===== Intro (audio + typewriter) ===== */
     const introTextFixed = `Здравствуй, Евгений. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан. Правила очень просты. Получай удовольствие и выигрывай призы`;
     const introAudio = new Audio('intro.mp3'); introAudio.preload = 'auto';
     const intro      = document.getElementById('intro');
@@ -219,15 +218,13 @@
     introClose.addEventListener('click', closeIntro);
     introSkip.addEventListener('click', closeIntro);
     window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeIntro(); });
-    introAudio.addEventListener('error', ()=>{ /* не мешаем UI */ });
 
     // ===== Звуки =====
     const spinSong = new Audio('song.mp3'); spinSong.loop = true; spinSong.preload = 'auto'; spinSong.volume = 0.3;
     const wrongSfx = new Audio('pole_letter_wrong.mp3');
     const winSfx1  = new Audio('zrejdbxx.mp3');
     const winSfx2  = new Audio('pole_word_1996.mp3');
-    // новый звук-подсказка для старта барабана после верного ответа
-    const spinHint = new Audio('spin_hint.mp3'); spinHint.preload = 'auto';
+    const spinHint = new Audio('spin_hint.mp3'); spinHint.preload = 'auto'; // подсказка после верного ответа
 
     // ===== Барабан =====
     const points = [100,200,300,400,500,600,700,800,900,1000];
@@ -272,11 +269,13 @@
     function spin(){
       if(spinning) return;
       spinning = true; spinCount++;
+
+      // одинаковые параметры на каждый спин + нормализация угла
+      angle = ((angle % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      const baseDur = 12000;
-      const DURATION = baseDur + Math.min(2,spinCount)*2000;
-      const TURNS    = 6 + Math.min(2,spinCount);
+      const DURATION = 11000; // фиксированная длительность
+      const TURNS    = 7;     // фиксированное число оборотов
 
       const startAngle = angle;
       const n = points.length; const arc = 2*Math.PI/n;
@@ -294,7 +293,8 @@
         const eased = easeOutCubic(t);
         angle = startAngle + (endAngle - startAngle) * eased;
         drawWheel(angle);
-        if(t < 1) requestAnimationFrame(step); else { spinning=false; finalize(targetIndex); }
+        if(t < 1) requestAnimationFrame(step);
+        else { spinning=false; finalize(targetIndex); }
       }
       requestAnimationFrame(step);
     }
@@ -311,7 +311,7 @@
         document.getElementById('qScore').textContent = `${p}`;
         document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
         qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
-      }, 2000);
+      }, 1200);
 
       showQuestion();
     }
@@ -358,10 +358,8 @@
         if(!isNaN(p)){ score += p; document.getElementById('score').textContent = score; }
         log('✅ Совершенно верно!');
         launchConfetti();
-        // победный звук
         try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
-        // подсказка: «крути барабан» — сразу после победного
-        setTimeout(()=>{ try{ spinHint.currentTime = 0; spinHint.play(); }catch(e){} }, 350);
+        setTimeout(()=>{ try{ spinHint.currentTime=0; spinHint.play(); }catch(e){} }, 350);
 
         round++;
         setTimeout(()=>{
@@ -428,15 +426,15 @@
       draw();
     }
 
-    // ===== Финальный экран подарков =====
+    // ===== Финальный экран подарков (без категорий в UI) =====
     const gifts = [
       {name:'Горный велосипед', type:'max', img:'bike.jpg', desc:'Надёжный MTB велосипед для настоящих приключений.'},
       {name:'Прыжок с парашютом', type:'max', img:'parachute.jpg', desc:'Чистый адреналин и незабываемые эмоции.'},
-      {name:'Вайбовая колонка', type:'max', img:'speaker.jpg', desc:'Громкий звук и пульсирующая подсветка.'},
-      {name:'E-book Amazon последняя версия', type:'max', img:'ebook.jpg', desc:'Новая Kindle для чтения где угодно.'},
+      {name:'Вайбовая колонка', type:'half', img:'speaker.jpg', desc:'Громкий звук и пульсирующая подсветка.'},
+      {name:'E-book Amazon последняя версия', type:'half', img:'ebook.jpg', desc:'Новая Kindle для чтения где угодно.'},
 
-      {name:'Очки с экшн камерой Mi', type:'half', img:'glasses.jpg', desc:'Снимай всё глазами — POV-формат.'},
-      {name:'Кольцо для отслеживания сна Mijia', type:'half', img:'ring.jpg', desc:'Твой сон и активность — под контролем.'},
+      {name:'Очки с экшн камерой Mi', type:'third', img:'glasses.jpg', desc:'Снимай всё глазами — POV-формат.'},
+      {name:'Кольцо для отслеживания сна Mijia', type:'third', img:'ring.jpg', desc:'Твой сон и активность — под контролем.'},
       {name:'Скидка 50% на авиабилет в любую страну', type:'half', img:'plane.jpg', desc:'Выбирай направление — полдела уже сделано!'},
 
       {name:'Поездка в национальный парк Нарочаны на выходные', type:'third', img:'naroch.jpg', desc:'Свежий воздух, леса и озёра.'},
@@ -456,7 +454,7 @@
 
     let budget=0, selection={}, pricedGifts=[];
 
-    // округление к ближайшим 100 вниз (не меньше 100)
+    // округление вниз к 100 (и минимум 100)
     const round100 = (v)=> Math.max(100, Math.floor(v/100)*100);
 
     function openGifts(finalScore){
@@ -466,28 +464,23 @@
       finalWarn.textContent = '';
       finalIntro.textContent = `Евгений, твой итоговый счёт — ${finalScore} очков. Выбирай призы на эту сумму:`;
 
-      // БАЗА: так, чтобы 1×max + 2×half + 3×third укладывались в бюджет.
-      // веса: 1 + 2*0.5 + 3*(1/3) = 3 → base = floor(budget/3) (кратно 100)
-      const base = round100(budget / 3);
-
-      // Цены по категориям (кратно 100, >0)
+      // цены от бюджета (кратно 100), без отображения категорий
       const priceByType = {
-        max:   round100(base * 1.0),
-        half:  round100(base * 0.5),
-        third: round100(base / 3)
+        max:   Math.min(round100(budget * 0.95), Math.max(100, budget - 100)), // почти максимум, но < бюджета
+        half:  round100(budget * 0.48),  // чуть меньше половины
+        third: round100(budget * 0.25)   // не больше четверти
       };
 
-      // Если бюджет совсем маленький (<300), зафиксируем минимумы
+      // если бюджет маленький — минималка 100
       if (budget < 300) {
-        priceByType.max = 100;
-        priceByType.half = 100;
-        priceByType.third = 100;
+        priceByType.max = Math.min(100, budget || 100);
+        priceByType.half = Math.min(100, budget || 100);
+        priceByType.third = Math.min(100, budget || 100);
       }
 
-      // сформировать цены
       pricedGifts = gifts.map(g=>({ ...g, price: priceByType[g.type] }));
 
-      // отрисовка
+      // отрисовка (без упоминания категорий)
       giftListEl.innerHTML = '';
       selection = {};
       pricedGifts.forEach((g,idx)=>{
@@ -495,7 +488,7 @@
         row.className = 'gift-row';
         row.innerHTML = `
           <label><input type="checkbox" data-idx="${idx}"/></label>
-          <div><a data-open="${idx}">${g.name}</a> — <b>${g.price}</b> очков <span class="sub">(${labelType(g.type)})</span></div>
+          <div><a data-open="${idx}">${g.name}</a> — <b>${g.price}</b> очков</div>
           <div></div>
         `;
         const detail = document.createElement('div');
@@ -503,7 +496,7 @@
         detail.innerHTML = `<img src="${g.img}" alt=""><p>${g.desc}</p>`;
         row.appendChild(detail);
 
-        row.querySelector(`a[data-open="${idx}"]`).addEventListener('click',()=>{
+        row.querySelector(\`a[data-open="\${idx}"]\`).addEventListener('click',()=>{
           detail.style.display = (detail.style.display==='block') ? 'none' : 'block';
         });
         row.querySelector('input[type="checkbox"]').addEventListener('change', onSelectChange);
@@ -522,12 +515,6 @@
       finalModal.setAttribute('aria-hidden','true');
     }
 
-    function labelType(t){
-      if(t==='max') return 'категория «Максимум»';
-      if(t==='half') return 'категория «Половина»';
-      return 'категория «Треть»';
-    }
-
     function onSelectChange(e){
       const idx = parseInt(e.target.dataset.idx,10);
       selection[idx] = e.target.checked;
@@ -535,25 +522,16 @@
     }
 
     function recompute(){
-      let spent = 0, cntMax=0, cntHalf=0, cntThird=0;
+      let spent = 0;
       Object.entries(selection).forEach(([k,v])=>{
         if(!v) return;
         const g = pricedGifts[parseInt(k,10)];
         spent += g.price;
-        if(g.type==='max') cntMax++;
-        else if(g.type==='half') cntHalf++;
-        else cntThird++;
       });
 
       spentEl.textContent = spent.toString();
-      finalWarn.textContent = '';
-
       let warn = '';
       if(spent > budget) warn += 'Перебор бюджета. ';
-      if(cntMax > 1) warn += 'Можно выбрать не больше 1 из «Максимум». ';
-      if(cntHalf > 2) warn += 'Можно выбрать не больше 2 из «Половина». ';
-      if(cntThird > 3) warn += 'Можно выбрать не больше 3 из «Треть». ';
-
       finalWarn.textContent = warn.trim();
       btnConfirm.disabled = warn.length>0 || spent===0;
     }
@@ -568,13 +546,14 @@
       const chosen = Object.entries(selection)
         .filter(([,v])=>v)
         .map(([k])=> pricedGifts[parseInt(k,10)]);
-      const names = chosen.map(c=>`${c.name} — ${c.price} очков`).join('\n');
-      alert(`Выбрано:\n${names}\n\nПоздравляем!`);
+      const names = chosen.map(c=>\`\${c.name} — \${c.price} очков\`).join('\\n');
+      alert(\`Выбрано:\\n\${names}\\n\\nПоздравляем!\`);
       closeGifts();
     }
   </script>
 </body>
 </html>
+
 
 
 
