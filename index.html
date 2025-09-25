@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -34,6 +35,7 @@
 
     .wheel-wrap{position:relative; display:grid; place-items:center; padding:26px; border-radius:24px; background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.1)}
     #wheel{width:100%; max-width:740px; aspect-ratio:1; background:#06112a; border-radius:50%; box-shadow:inset 0 0 50px rgba(0,0,0,.7)}
+    /* верхняя стрелка */
     .pin{position:absolute; top:10px; left:50%; transform:translateX(-50%);
          width:0; height:0; border-left:16px solid transparent; border-right:16px solid transparent;
          border-bottom:26px solid var(--gold2); filter:drop-shadow(0 3px 8px rgba(0,0,0,.6))}
@@ -60,9 +62,8 @@
     .ibox h3{margin:0; color:var(--gold); text-shadow:0 1px 0 #000}
     .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
     .icta{display:flex; gap:10px; margin-top:12px}
-    .skip{margin-left:auto; background:transparent; border:none; color:#fff; opacity:.7; cursor:pointer; text-decoration:underline; font-weight:800}
 
-    /* Result modal */
+    /* Result modal (выпавшие очки + вопрос) */
     .modal{position:fixed; inset:0; background:rgba(5,10,25,.86); display:none; place-items:center; z-index:1500}
     .modal.show{display:grid}
     .modal-card{width:min(720px,92vw); border-radius:20px; padding:22px; color:var(--ink);
@@ -101,7 +102,6 @@
       <div class="icta">
         <button id="introPlay" class="btn">▶️ Воспроизвести</button>
         <button id="introClose" class="btn btn-ghost">Закрыть</button>
-        <button id="introSkip" class="skip">Пропустить</button>
       </div>
     </div>
   </div>
@@ -181,75 +181,51 @@
   </div>
 
   <script>
-    /* ===== Intro (audio + typewriter) — БЕЗ ЗАВИСОНИЙ ===== */
+    // ===== Intro (audio + typewriter)
     const introTextFixed = `Здравствуй, Евгений. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан. Правила очень просты. Получай удовольствие и выигрывай призы`;
     const introAudio = new Audio('intro.mp3');
     const intro = document.getElementById('intro');
     const introPlay = document.getElementById('introPlay');
     const introClose = document.getElementById('introClose');
-    const introSkip = document.getElementById('introSkip');
     const introTextEl = document.getElementById('introText');
 
-    const closeIntro = ()=>{
-      intro.classList.add('hide');
-      try{ introAudio.pause(); }catch(e){}
-    };
-    introClose.addEventListener('click', closeIntro);
-    introSkip.addEventListener('click', closeIntro);
-    intro.addEventListener('click', e=>{ if(e.target===intro) closeIntro(); });
-    document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeIntro(); });
-
-    function typewrite(text, el, speed=96){
+    function typewrite(text, el, speed=96){ // медленнее (~×4)
       return new Promise(res=>{
         el.textContent=''; let i=0;
-        const t=setInterval(()=>{
-          el.textContent += text[i++]||'';
-          if(i>=text.length){ clearInterval(t); res(); }
-        }, speed);
+        const t=setInterval(()=>{ el.textContent += text[i++]||''; if(i>=text.length){ clearInterval(t); res(); } }, speed);
       });
     }
-
     introPlay.addEventListener('click', async ()=>{
       introPlay.disabled = true;
-      // Запускаем ПАРАЛЛЕЛЬНО и не ждём play() (автоплей может быть заблокирован)
-      try{ introAudio.currentTime=0; introAudio.play().catch(()=>{}); }catch(e){}
-      const typed = typewrite(introTextFixed, introTextEl);
-      const ended = new Promise(res=>{
-        introAudio.addEventListener('ended', res, {once:true});
-        // если не стартануло — резолвим по таймеру
-        setTimeout(res, 20000);
-      });
-      // auto-close по первому событию: окончание аудио ИЛИ печати (что наступит позже — не критично, добавим общий timeout)
-      Promise.race([ended, typed, new Promise(r=>setTimeout(r, 22000))]).then(closeIntro);
+      try{ await introAudio.play(); }catch(e){}
+      await typewrite(introTextFixed, introTextEl);
     });
+    introClose.addEventListener('click', ()=>{ intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){} });
 
-    /* ===== Звуки ===== */
+    // ===== Звуки
     const spinSong = new Audio('song.mp3'); spinSong.loop = true; spinSong.preload = 'auto'; spinSong.volume = 0.3;
     const wrongSfx = new Audio('pole_letter_wrong.mp3');
     const winSfx1  = new Audio('zrejdbxx.mp3');
     const winSfx2  = new Audio('pole_word_1996.mp3');
-    const spinHint = new Audio('spin_hint.mp3'); // доп. звук-подсказка крутить барабан
 
-    /* ===== Барабан ===== */
+    // ===== Барабан
     const points = [100,200,300,400,500,600,700,800,900,1000];
     const wheel  = document.getElementById('wheel');
-    const ctx    = wheel.getContext('2d', {alpha:true});
-    let angle=0, spinning=false;
-
-    const TAU = Math.PI*2;
-    const norm = a => { a%=TAU; if(a<0) a+=TAU; return a; };
+    const ctx    = wheel.getContext('2d');
+    let angle=0, spinning=false, spinCount=0;
 
     function drawWheel(a=0){
       const W = wheel.width  = wheel.clientWidth  * devicePixelRatio;
       const H = wheel.height = wheel.clientHeight * devicePixelRatio;
       const cx=W/2, cy=H/2; const R=Math.min(W,H)/2 - 12*devicePixelRatio;
-      const n = points.length; const arc = TAU/n;
+      const n = points.length; const arc = 2*Math.PI/n;
       ctx.clearRect(0,0,W,H); ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
 
       for(let i=0;i<n;i++){
         ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,i*arc,(i+1)*arc);
         ctx.fillStyle = (i%2? '#103079':'#142d63'); ctx.fill();
         ctx.strokeStyle = '#0a1e4f'; ctx.lineWidth = 3*devicePixelRatio; ctx.stroke();
+        // цифры
         ctx.save(); ctx.rotate(i*arc + arc/2); ctx.fillStyle = '#ffdc73';
         ctx.font = `${Math.max(18*devicePixelRatio,R*0.085)}px system-ui`;
         ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -260,10 +236,10 @@
       // лампочки
       const bulbs = 72;
       for(let i=0;i<bulbs;i++){
-        const ang = a + (i/bulbs)*TAU;
+        const ang = a + (i/bulbs)*Math.PI*2;
         const bx = Math.cos(ang)*(R+10*devicePixelRatio);
         const by = Math.sin(ang)*(R+10*devicePixelRatio);
-        ctx.beginPath(); ctx.arc(bx,by,4*devicePixelRatio,0,TAU);
+        ctx.beginPath(); ctx.arc(bx,by,4*devicePixelRatio,0,Math.PI*2);
         const on = (Math.floor(Date.now()/120)%2===i%2);
         ctx.fillStyle = on? 'rgba(255,240,150,.95)':'rgba(255,210,77,.85)';
         ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.stroke();
@@ -275,20 +251,22 @@
 
     function spin(){
       if(spinning) return;
-      spinning = true;
+      spinning = true; spinCount++;
+
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      // Стабильная «сочная» прокрутка каждый раз
-      const DURATION = 12000 + Math.random()*2500;      // ~12–14.5с
-      const TURNS    = 7 + Math.floor(Math.random()*2); // 7–8 оборотов
+      // Чем дальше по игре — чуть бодрее старт и подлиннее прокрут
+      const baseDur = 12000; // база
+      const DURATION = baseDur + Math.min(2,spinCount)*2000; // до +4с
+      const TURNS    = 6 + Math.min(2,spinCount); // 6..8 оборотов
 
-      const startAngle = norm(angle);
-      const n = points.length; const arc = TAU/n;
+      const startAngle = angle;
+      const n = points.length; const arc = 2*Math.PI/n;
 
       const targetIndex = Math.floor(Math.random()*n);
       const sectorCenter = (targetIndex + 0.5) * arc;
-      const targetAngle  = norm(-Math.PI/2 - sectorCenter); // верхняя стрелка
-      const endAngle     = targetAngle + TURNS*TAU;
+      const targetAngle  = -Math.PI/2 - sectorCenter;
+      const endAngle     = targetAngle + TURNS*2*Math.PI;
 
       const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
       const t0 = performance.now();
@@ -297,9 +275,8 @@
         const t = Math.min(1, (ts - t0) / DURATION);
         const eased = easeOutCubic(t);
         angle = startAngle + (endAngle - startAngle) * eased;
-        drawWheel(norm(angle));
-        if (t < 1) requestAnimationFrame(step);
-        else { spinning=false; angle = norm(targetAngle); finalize(targetIndex); }
+        drawWheel(angle);
+        if(t < 1) requestAnimationFrame(step); else { spinning=false; finalize(targetIndex); }
       }
       requestAnimationFrame(step);
     }
@@ -311,12 +288,13 @@
       log(`🎯 Выпало: <b>${p}</b> очков`);
       document.getElementById('rule').innerHTML = `Твои очки за барабан: <span class="points">${p}</span>. Ответь на вопрос!`;
 
+      // показать модалку с вопросом через 2с
       const r = rounds[round];
       setTimeout(()=>{
         document.getElementById('qScore').textContent = `${p}`;
         document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
         qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
-      }, 800);
+      }, 2000);
 
       showQuestion();
     }
@@ -328,7 +306,7 @@
       box.prepend(d);
     }
 
-    /* ===== Вопросы ===== */
+    // ===== Вопросы
     const rounds = [
       { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
       { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
@@ -343,7 +321,11 @@
 
     function showQuestion(){
       const r = rounds[round];
-      if(!r){ openGifts(score); return; }
+      if(!r){
+        // все вопросы пройдены — показываем подарки
+        openGifts(score);
+        return;
+      }
       document.getElementById('question').textContent = `Вопрос: ${r.q}`;
       const firstAns = Array.isArray(r.a) ? r.a[0] : r.a;
       document.getElementById('length').textContent  = `Слово из ${normalizeRu(firstAns).length} букв`;
@@ -363,18 +345,18 @@
         if(!isNaN(p)){ score += p; document.getElementById('score').textContent = score; }
         log('✅ Совершенно верно!');
         launchConfetti();
-        try{
-          (Math.random()<0.5 ? winSfx1 : winSfx2).play();
-          setTimeout(()=>{ try{ spinHint.currentTime=0; spinHint.play(); }catch(e){} }, 900);
-        }catch(e){}
+        try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
 
         round++;
         setTimeout(()=>{
           document.getElementById('rule').textContent = 'Снова крути барабан!';
           document.getElementById('question').textContent = 'Вопрос появится после барабана.';
           document.getElementById('length').textContent = '';
-          if(round >= rounds.length){ setTimeout(()=>openGifts(score), 700); }
-        }, 500);
+          if(round >= rounds.length){
+            // небольшой тайм-аут для эффекта — и финал
+            setTimeout(()=>openGifts(score), 700);
+          }
+        }, 600);
       } else {
         box.classList.remove('correct'); box.classList.add('wrong');
         log('❌ Неверно, попробуй ещё раз.');
@@ -395,7 +377,7 @@
     document.getElementById('reset').addEventListener('click', ()=>{
       try{ spinSong.pause(); }catch(e){}
       spinSong.currentTime=0; spinSong.volume=0.3;
-      score=0; round=0; angle=0;
+      score=0; round=0; angle=0; spinCount=0;
       document.getElementById('score').textContent='0';
       document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.';
       document.getElementById('question').textContent='Вопрос появится после барабана.';
@@ -405,7 +387,7 @@
       drawWheel(0); document.getElementById('log').innerHTML='';
     });
 
-    /* ===== Конфетти ===== */
+    // ===== Конфетти
     function launchConfetti(){
       const c=document.createElement('canvas'); c.className='confetti'; document.body.appendChild(c);
       const cx=c.getContext('2d'); const DPR=window.devicePixelRatio||1;
@@ -431,7 +413,7 @@
       draw();
     }
 
-    /* ===== Финальный экран подарков ===== */
+    // ===== Финальный экран подарков =====
     const gifts = [
       {name:'Горный велосипед', type:'max', img:'bike.jpg', desc:'Надёжный MTB велосипед для настоящих приключений.'},
       {name:'Прыжок с парашютом', type:'max', img:'parachute.jpg', desc:'Чистый адреналин и незабываемые эмоции.'},
@@ -460,30 +442,21 @@
     let budget=0, selection={}, pricedGifts=[];
 
     function randRange(min,max){ return Math.floor(Math.random()*(max-min)+min); }
-    function round100(v){ return Math.max(100, Math.round(v/100)*100); }
 
     function openGifts(finalScore){
       budget = finalScore;
-      const slack = randRange(100, 201);                 // запас 100–200
-      const effBudget = Math.max(100, budget - slack);   // цены считаем от него
-
       budgetEl.textContent = budget.toString();
       spentEl.textContent = '0';
       finalWarn.textContent = '';
       finalIntro.textContent = `Евгений, твой итоговый счёт — ${finalScore} очков. Выбирай призы на эту сумму:`;
 
-      // Диапазоны цен — всё кратно 100, и «треть» легко взять 3 штуки
-      const ranges = {
-        max:   [0.92, 1.00],
-        half:  [0.46, 0.54],
-        third: [0.30, 0.31],
-      };
-
+      // сформировать цены
       pricedGifts = gifts.map(g=>{
-        const [lo,hi] = ranges[g.type] || [0.3,0.4];
-        const raw = randRange(effBudget*lo, effBudget*hi);
-        const price = round100(raw);
-        return {...g, price};
+        let price=0;
+        if(g.type==='max')  price = randRange(budget*0.9, budget*1.0);
+        if(g.type==='half') price = randRange(budget*0.45, budget*0.55);
+        if(g.type==='third')price = randRange(budget*0.28, budget*0.35);
+        return {...g, price: Math.max(1, Math.round(price))};
       });
 
       // отрисовка
@@ -502,7 +475,7 @@
         detail.innerHTML = `<img src="${g.img}" alt=""><p>${g.desc}</p>`;
         row.appendChild(detail);
 
-        row.querySelector(\`a[data-open="\${idx}"]\`).addEventListener('click',()=>{
+        row.querySelector(`a[data-open="${idx}"]`).addEventListener('click',()=>{
           detail.style.display = (detail.style.display==='block') ? 'none' : 'block';
         });
         row.querySelector('input[type="checkbox"]').addEventListener('change', onSelectChange);
@@ -514,7 +487,6 @@
       btnClose.onclick = ()=>closeGifts();
 
       finalModal.classList.add('show'); finalModal.setAttribute('aria-hidden','false');
-      recompute();
     }
 
     function closeGifts(){
@@ -530,6 +502,7 @@
 
     function onSelectChange(e){
       const idx = parseInt(e.target.dataset.idx,10);
+      const g = pricedGifts[idx];
       selection[idx] = e.target.checked;
       recompute();
     }
@@ -546,13 +519,16 @@
       });
 
       spentEl.textContent = spent.toString();
+      finalWarn.textContent = '';
+
+      // ограничения
       let warn = '';
       if(spent > budget) warn += 'Перебор бюджета. ';
       if(cntMax > 1) warn += 'Можно выбрать не больше 1 из «Максимум». ';
       if(cntHalf > 2) warn += 'Можно выбрать не больше 2 из «Половина». ';
       if(cntThird > 3) warn += 'Можно выбрать не больше 3 из «Треть». ';
-      finalWarn.textContent = warn.trim();
 
+      finalWarn.textContent = warn.trim();
       btnConfirm.disabled = warn.length>0 || spent===0;
     }
 
@@ -573,6 +549,9 @@
   </script>
 </body>
 </html>
+
+
+
 
 
 
