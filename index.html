@@ -53,6 +53,7 @@
     .answer.wrong input{border-color:var(--bad)}
     .note{font-size:12px; color:var(--muted)}
 
+    /* Intro modal */
     .intro{position:fixed; inset:0; display:grid; place-items:center; background:rgba(7,10,24,.88); z-index:1000}
     .intro.hide{display:none}
     .ibox{width:min(720px,92vw); background:linear-gradient(180deg, #12265c, #0d1b46); border:1px solid rgba(255,255,255,.12); border-radius:20px; box-shadow:0 28px 90px rgba(0,0,0,.55); padding:18px}
@@ -60,6 +61,7 @@
     .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
     .icta{display:flex; gap:10px; margin-top:12px}
 
+    /* Result modal (выпавшие очки + вопрос) */
     .modal{position:fixed; inset:0; background:rgba(5,10,25,.86); display:none; place-items:center; z-index:1500}
     .modal.show{display:grid}
     .modal-card{width:min(720px,92vw); border-radius:20px; padding:22px; color:var(--ink);
@@ -73,6 +75,7 @@
     .points{font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(255,220,115,.9)}
     canvas.confetti{position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:2000}
 
+    /* ===== Финальный экран подарков ===== */
     .final{position:fixed; inset:0; background:rgba(0,0,0,.86); display:none; place-items:center; z-index:2200}
     .final.show{display:grid}
     .final-card{width:min(980px,94vw); background:linear-gradient(180deg,#112552,#0d1c45); color:var(--ink);
@@ -97,6 +100,7 @@
       <div class="icta">
         <button id="introPlay" class="btn">▶️ Воспроизвести</button>
         <button id="introClose" class="btn btn-ghost">Закрыть</button>
+        <button id="introSkip" class="btn btn-ghost">Пропустить</button>
       </div>
     </div>
   </div>
@@ -176,56 +180,74 @@
   </div>
 
   <script>
-    // ===== Intro (audio + typewriter)
+    /* ===== Intro (audio + typewriter) — без зависаний ===== */
     const introTextFixed = `Здравствуй, Евгений. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан. Правила очень просты. Получай удовольствие и выигрывай призы`;
-    const introAudio = new Audio('intro.mp3');
-    const intro = document.getElementById('intro');
-    const introPlay = document.getElementById('introPlay');
+    const introAudio = new Audio('intro.mp3'); introAudio.preload = 'auto';
+    const intro      = document.getElementById('intro');
+    const introPlay  = document.getElementById('introPlay');
     const introClose = document.getElementById('introClose');
-    const introTextEl = document.getElementById('introText');
+    const introSkip  = document.getElementById('introSkip');
+    const introTextEl= document.getElementById('introText');
 
     function typewrite(text, el, speed=96){
       return new Promise(res=>{
         el.textContent=''; let i=0;
-        const t=setInterval(()=>{ el.textContent += text[i++]||''; if(i>=text.length){ clearInterval(t); res(); } }, speed);
+        const t=setInterval(()=>{
+          el.textContent += text[i++]||'';
+          if(i>=text.length){ clearInterval(t); res(); }
+        }, speed);
       });
     }
-    introPlay.addEventListener('click', async ()=>{
+    function safePlay(audio){
+      try{
+        const p = audio.play();
+        if(p && typeof p.then==='function'){ p.catch(()=>{}); }
+      }catch(e){}
+    }
+    async function startIntro(){
       introPlay.disabled = true;
-      try{ await introAudio.play(); }catch(e){}
-      await typewrite(introTextFixed, introTextEl);
-    });
-    introClose.addEventListener('click', ()=>{ intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){} });
+      safePlay(introAudio);
+      await typewrite(introTextFixed, introTextEl).catch(()=>{});
+      introPlay.disabled = false;
+      introPlay.textContent = '▶️ Повторить';
+    }
+    function closeIntro(){
+      intro.classList.add('hide');
+      try{ introAudio.pause(); }catch(e){}
+    }
+    introPlay.addEventListener('click', startIntro);
+    introClose.addEventListener('click', closeIntro);
+    introSkip.addEventListener('click', closeIntro);
+    window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeIntro(); });
+    introAudio.addEventListener('error', ()=>{ /* не мешаем UI */ });
 
-    // ===== Звуки
+    // ===== Звуки =====
     const spinSong = new Audio('song.mp3'); spinSong.loop = true; spinSong.preload = 'auto'; spinSong.volume = 0.3;
     const wrongSfx = new Audio('pole_letter_wrong.mp3');
     const winSfx1  = new Audio('zrejdbxx.mp3');
     const winSfx2  = new Audio('pole_word_1996.mp3');
-    // новый звук-подсказка
-    const spinHint = new Audio('spin_hint.mp3');
+    // новый звук-подсказка для старта барабана после верного ответа
+    const spinHint = new Audio('spin_hint.mp3'); spinHint.preload = 'auto';
 
-    // ===== Барабан
+    // ===== Барабан =====
     const points = [100,200,300,400,500,600,700,800,900,1000];
     const wheel  = document.getElementById('wheel');
     const ctx    = wheel.getContext('2d');
-    let angle=0, spinning=false, spinCount=0, rafId=null;
+    let angle=0, spinning=false, spinCount=0;
 
     function drawWheel(a=0){
-      const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1)); // ограничим DPR во имя производительности
-      const W = wheel.width  = Math.max(200, wheel.clientWidth)  * dpr;
-      const H = wheel.height = Math.max(200, wheel.clientHeight) * dpr;
-      const cx=W/2, cy=H/2; const R=Math.min(W,H)/2 - 12*dpr;
+      const W = wheel.width  = wheel.clientWidth  * devicePixelRatio;
+      const H = wheel.height = wheel.clientHeight * devicePixelRatio;
+      const cx=W/2, cy=H/2; const R=Math.min(W,H)/2 - 12*devicePixelRatio;
       const n = points.length; const arc = 2*Math.PI/n;
       ctx.clearRect(0,0,W,H); ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
 
       for(let i=0;i<n;i++){
         ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,i*arc,(i+1)*arc);
         ctx.fillStyle = (i%2? '#103079':'#142d63'); ctx.fill();
-        ctx.strokeStyle = '#0a1e4f'; ctx.lineWidth = 3*dpr; ctx.stroke();
-        // цифры
+        ctx.strokeStyle = '#0a1e4f'; ctx.lineWidth = 3*devicePixelRatio; ctx.stroke();
         ctx.save(); ctx.rotate(i*arc + arc/2); ctx.fillStyle = '#ffdc73';
-        ctx.font = `${Math.max(18*dpr,R*0.085)}px system-ui`;
+        ctx.font = `${Math.max(18*devicePixelRatio,R*0.085)}px system-ui`;
         ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.translate(R*0.75,0); ctx.rotate(Math.PI/2);
         ctx.fillText(points[i].toString(),0,0);
@@ -235,9 +257,9 @@
       const bulbs = 72;
       for(let i=0;i<bulbs;i++){
         const ang = a + (i/bulbs)*Math.PI*2;
-        const bx = Math.cos(ang)*(R+10*dpr);
-        const by = Math.sin(ang)*(R+10*dpr);
-        ctx.beginPath(); ctx.arc(bx,by,4*dpr,0,Math.PI*2);
+        const bx = Math.cos(ang)*(R+10*devicePixelRatio);
+        const by = Math.sin(ang)*(R+10*devicePixelRatio);
+        ctx.beginPath(); ctx.arc(bx,by,4*devicePixelRatio,0,Math.PI*2);
         const on = (Math.floor(Date.now()/120)%2===i%2);
         ctx.fillStyle = on? 'rgba(255,240,150,.95)':'rgba(255,210,77,.85)';
         ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.stroke();
@@ -250,13 +272,10 @@
     function spin(){
       if(spinning) return;
       spinning = true; spinCount++;
-      document.getElementById('spin').disabled = true;
-
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      // динамика прокрутки
-      const baseDur = 9000; // чуть короче
-      const DURATION = baseDur + Math.min(2,spinCount)*1500;
+      const baseDur = 12000;
+      const DURATION = baseDur + Math.min(2,spinCount)*2000;
       const TURNS    = 6 + Math.min(2,spinCount);
 
       const startAngle = angle;
@@ -270,29 +289,14 @@
       const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
       const t0 = performance.now();
 
-      // страховка от зависаний rAF
-      const safety = setTimeout(()=>{
-        if(spinning){
-          cancelAnimationFrame(rafId);
-          spinning=false;
-          finalize(targetIndex);
-        }
-      }, DURATION + 1500);
-
       function step(ts){
         const t = Math.min(1, (ts - t0) / DURATION);
         const eased = easeOutCubic(t);
         angle = startAngle + (endAngle - startAngle) * eased;
         drawWheel(angle);
-        if(t < 1){
-          rafId = requestAnimationFrame(step);
-        } else {
-          clearTimeout(safety);
-          spinning=false;
-          finalize(targetIndex);
-        }
+        if(t < 1) requestAnimationFrame(step); else { spinning=false; finalize(targetIndex); }
       }
-      rafId = requestAnimationFrame(step);
+      requestAnimationFrame(step);
     }
     document.getElementById('spin').addEventListener('click', spin);
 
@@ -307,10 +311,9 @@
         document.getElementById('qScore').textContent = `${p}`;
         document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
         qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
-      }, 800); // быстрее отдаём вопрос
+      }, 2000);
 
       showQuestion();
-      document.getElementById('spin').disabled = false; // уже можно снова крутить после ответа
     }
 
     function log(html){
@@ -320,7 +323,7 @@
       box.prepend(d);
     }
 
-    // ===== Вопросы
+    // ===== Вопросы =====
     const rounds = [
       { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
       { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
@@ -335,10 +338,7 @@
 
     function showQuestion(){
       const r = rounds[round];
-      if(!r){
-        openGifts(score);
-        return;
-      }
+      if(!r){ openGifts(score); return; }
       document.getElementById('question').textContent = `Вопрос: ${r.q}`;
       const firstAns = Array.isArray(r.a) ? r.a[0] : r.a;
       document.getElementById('length').textContent  = `Слово из ${normalizeRu(firstAns).length} букв`;
@@ -358,11 +358,10 @@
         if(!isNaN(p)){ score += p; document.getElementById('score').textContent = score; }
         log('✅ Совершенно верно!');
         launchConfetti();
-        try{
-          (Math.random()<0.5 ? winSfx1 : winSfx2).play().catch(()=>{});
-        }catch(e){}
-        // подсказка "крути барабан" — вторым звуком
-        setTimeout(()=>{ try{ spinHint.currentTime=0; spinHint.play(); }catch(e){} }, 300);
+        // победный звук
+        try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
+        // подсказка: «крути барабан» — сразу после победного
+        setTimeout(()=>{ try{ spinHint.currentTime = 0; spinHint.play(); }catch(e){} }, 350);
 
         round++;
         setTimeout(()=>{
@@ -370,9 +369,9 @@
           document.getElementById('question').textContent = 'Вопрос появится после барабана.';
           document.getElementById('length').textContent = '';
           if(round >= rounds.length){
-            setTimeout(()=>openGifts(score), 600);
+            setTimeout(()=>openGifts(score), 700);
           }
-        }, 500);
+        }, 600);
       } else {
         box.classList.remove('correct'); box.classList.add('wrong');
         log('❌ Неверно, попробуй ещё раз.');
@@ -394,7 +393,6 @@
       try{ spinSong.pause(); }catch(e){}
       spinSong.currentTime=0; spinSong.volume=0.3;
       score=0; round=0; angle=0; spinCount=0;
-      document.getElementById('spin').disabled = false;
       document.getElementById('score').textContent='0';
       document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.';
       document.getElementById('question').textContent='Вопрос появится после барабана.';
@@ -404,7 +402,7 @@
       drawWheel(0); document.getElementById('log').innerHTML='';
     });
 
-    // ===== Конфетти
+    // ===== Конфетти =====
     function launchConfetti(){
       const c=document.createElement('canvas'); c.className='confetti'; document.body.appendChild(c);
       const cx=c.getContext('2d'); const DPR=window.devicePixelRatio||1;
@@ -458,36 +456,36 @@
 
     let budget=0, selection={}, pricedGifts=[];
 
-    const floor100 = n => Math.max(100, Math.floor(n/100)*100);
-
-    function pricePlan(b){
-      // Цены по категориям (в сотнях) так, чтобы 1*max + 2*half + 3*third <= b
-      let maxUnit  = floor100(b * 0.40);
-      let halfUnit = floor100(b * 0.15);
-      let thirdUnit= floor100(b * 0.10);
-      // если суммарно вышли за бюджет — подрезаем «треть», затем «половину», затем «максимум»
-      let sum = maxUnit + 2*halfUnit + 3*thirdUnit;
-      while(sum > b && thirdUnit > 100){ thirdUnit -= 100; sum = maxUnit + 2*halfUnit + 3*thirdUnit; }
-      while(sum > b && halfUnit  > 100){ halfUnit  -= 100; sum = maxUnit + 2*halfUnit + 3*thirdUnit; }
-      while(sum > b && maxUnit   > 100){ maxUnit   -= 100; sum = maxUnit + 2*halfUnit + 3*thirdUnit; }
-      return { maxUnit, halfUnit, thirdUnit };
-    }
+    // округление к ближайшим 100 вниз (не меньше 100)
+    const round100 = (v)=> Math.max(100, Math.floor(v/100)*100);
 
     function openGifts(finalScore){
-      budget = floor100(finalScore); // сам бюджет тоже кратен 100
+      budget = Math.max(0, finalScore);
       budgetEl.textContent = budget.toString();
       spentEl.textContent = '0';
       finalWarn.textContent = '';
-      finalIntro.textContent = `Евгений, твой итоговый счёт — ${budget} очков. Выбирай призы на эту сумму:`;
+      finalIntro.textContent = `Евгений, твой итоговый счёт — ${finalScore} очков. Выбирай призы на эту сумму:`;
 
-      // фиксируем цены по типам
-      const { maxUnit, halfUnit, thirdUnit } = pricePlan(budget);
+      // БАЗА: так, чтобы 1×max + 2×half + 3×third укладывались в бюджет.
+      // веса: 1 + 2*0.5 + 3*(1/3) = 3 → base = floor(budget/3) (кратно 100)
+      const base = round100(budget / 3);
 
-      // назначаем цену каждому подарку в зависимости от типа (все кратно 100)
-      pricedGifts = gifts.map(g=>{
-        const price = g.type==='max' ? maxUnit : g.type==='half' ? halfUnit : thirdUnit;
-        return {...g, price};
-      });
+      // Цены по категориям (кратно 100, >0)
+      const priceByType = {
+        max:   round100(base * 1.0),
+        half:  round100(base * 0.5),
+        third: round100(base / 3)
+      };
+
+      // Если бюджет совсем маленький (<300), зафиксируем минимумы
+      if (budget < 300) {
+        priceByType.max = 100;
+        priceByType.half = 100;
+        priceByType.third = 100;
+      }
+
+      // сформировать цены
+      pricedGifts = gifts.map(g=>({ ...g, price: priceByType[g.type] }));
 
       // отрисовка
       giftListEl.innerHTML = '';
@@ -505,7 +503,7 @@
         detail.innerHTML = `<img src="${g.img}" alt=""><p>${g.desc}</p>`;
         row.appendChild(detail);
 
-        row.querySelector(\`a[data-open="\${idx}"]\`).addEventListener('click',()=>{
+        row.querySelector(`a[data-open="${idx}"]`).addEventListener('click',()=>{
           detail.style.display = (detail.style.display==='block') ? 'none' : 'block';
         });
         row.querySelector('input[type="checkbox"]').addEventListener('change', onSelectChange);
@@ -530,8 +528,6 @@
       return 'категория «Треть»';
     }
 
-    let limits = { max:1, half:2, third:3 };
-
     function onSelectChange(e){
       const idx = parseInt(e.target.dataset.idx,10);
       selection[idx] = e.target.checked;
@@ -539,20 +535,25 @@
     }
 
     function recompute(){
-      let spent = 0, cnt = {max:0, half:0, third:0};
+      let spent = 0, cntMax=0, cntHalf=0, cntThird=0;
       Object.entries(selection).forEach(([k,v])=>{
         if(!v) return;
         const g = pricedGifts[parseInt(k,10)];
         spent += g.price;
-        cnt[g.type]++;
+        if(g.type==='max') cntMax++;
+        else if(g.type==='half') cntHalf++;
+        else cntThird++;
       });
 
       spentEl.textContent = spent.toString();
+      finalWarn.textContent = '';
+
       let warn = '';
       if(spent > budget) warn += 'Перебор бюджета. ';
-      if(cnt.max  > limits.max)  warn += 'Можно выбрать не больше 1 из «Максимум». ';
-      if(cnt.half > limits.half) warn += 'Можно выбрать не больше 2 из «Половина». ';
-      if(cnt.third> limits.third)warn += 'Можно выбрать не больше 3 из «Треть». ';
+      if(cntMax > 1) warn += 'Можно выбрать не больше 1 из «Максимум». ';
+      if(cntHalf > 2) warn += 'Можно выбрать не больше 2 из «Половина». ';
+      if(cntThird > 3) warn += 'Можно выбрать не больше 3 из «Треть». ';
+
       finalWarn.textContent = warn.trim();
       btnConfirm.disabled = warn.length>0 || spent===0;
     }
@@ -567,13 +568,14 @@
       const chosen = Object.entries(selection)
         .filter(([,v])=>v)
         .map(([k])=> pricedGifts[parseInt(k,10)]);
-      const names = chosen.map(c=>\`\${c.name} — \${c.price} очков\`).join('\\n');
-      alert(\`Выбрано:\\n\${names}\\n\\nПоздравляем!\`);
+      const names = chosen.map(c=>`${c.name} — ${c.price} очков`).join('\n');
+      alert(`Выбрано:\n${names}\n\nПоздравляем!`);
       closeGifts();
     }
   </script>
 </body>
 </html>
+
 
 
 
