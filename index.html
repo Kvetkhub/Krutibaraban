@@ -34,7 +34,6 @@
 
     .wheel-wrap{position:relative; display:grid; place-items:center; padding:26px; border-radius:24px; background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.1)}
     #wheel{width:100%; max-width:740px; aspect-ratio:1; background:#06112a; border-radius:50%; box-shadow:inset 0 0 50px rgba(0,0,0,.7)}
-    /* верхняя стрелка */
     .pin{position:absolute; top:10px; left:50%; transform:translateX(-50%);
          width:0; height:0; border-left:16px solid transparent; border-right:16px solid transparent;
          border-bottom:26px solid var(--gold2); filter:drop-shadow(0 3px 8px rgba(0,0,0,.6))}
@@ -62,7 +61,7 @@
     .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
     .icta{display:flex; gap:10px; margin-top:12px}
 
-    /* Result modal (выпавшие очки + вопрос) */
+    /* Result modal */
     .modal{position:fixed; inset:0; background:rgba(5,10,25,.86); display:none; place-items:center; z-index:1500}
     .modal.show{display:grid}
     .modal-card{width:min(720px,92vw); border-radius:20px; padding:22px; color:var(--ink);
@@ -76,7 +75,7 @@
     .points{font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(255,220,115,.9)}
     canvas.confetti{position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:2000}
 
-    /* ===== Финальный экран подарков ===== */
+    /* Финальный экран подарков */
     .final{position:fixed; inset:0; background:rgba(0,0,0,.86); display:none; place-items:center; z-index:2200}
     .final.show{display:grid}
     .final-card{width:min(980px,94vw); background:linear-gradient(180deg,#112552,#0d1c45); color:var(--ink);
@@ -145,6 +144,7 @@
           <div class="note">Подсказка: верный ответ подсветится <span style="color:var(--good)">зелёным</span>, неверный — <span style="color:var(--bad)">красным</span>.</div>
         </div>
       </div>
+
     </div>
   </div>
 
@@ -188,7 +188,7 @@
     const introClose = document.getElementById('introClose');
     const introTextEl = document.getElementById('introText');
 
-    function typewrite(text, el, speed=96){ // медленнее (~×4)
+    function typewrite(text, el, speed=96){
       return new Promise(res=>{
         el.textContent=''; let i=0;
         const t=setInterval(()=>{ el.textContent += text[i++]||''; if(i>=text.length){ clearInterval(t); res(); } }, speed);
@@ -206,6 +206,8 @@
     const wrongSfx = new Audio('pole_letter_wrong.mp3');
     const winSfx1  = new Audio('zrejdbxx.mp3');
     const winSfx2  = new Audio('pole_word_1996.mp3');
+    // новый звук-подсказка после правильного ответа
+    const spinHint = new Audio('spin_hint.mp3');
 
     // ===== Барабан
     const points = [100,200,300,400,500,600,700,800,900,1000];
@@ -254,10 +256,9 @@
 
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      // Чем дальше по игре — чуть бодрее старт и подлиннее прокрут
-      const baseDur = 12000; // база
-      const DURATION = baseDur + Math.min(2,spinCount)*2000; // до +4с
-      const TURNS    = 6 + Math.min(2,spinCount); // 6..8 оборотов
+      const baseDur = 12000;
+      const DURATION = baseDur + Math.min(2,spinCount)*2000;
+      const TURNS    = 6 + Math.min(2,spinCount);
 
       const startAngle = angle;
       const n = points.length; const arc = 2*Math.PI/n;
@@ -287,7 +288,6 @@
       log(`🎯 Выпало: <b>${p}</b> очков`);
       document.getElementById('rule').innerHTML = `Твои очки за барабан: <span class="points">${p}</span>. Ответь на вопрос!`;
 
-      // показать модалку с вопросом через 2с
       const r = rounds[round];
       setTimeout(()=>{
         document.getElementById('qScore').textContent = `${p}`;
@@ -321,7 +321,6 @@
     function showQuestion(){
       const r = rounds[round];
       if(!r){
-        // все вопросы пройдены — показываем подарки
         openGifts(score);
         return;
       }
@@ -344,7 +343,13 @@
         if(!isNaN(p)){ score += p; document.getElementById('score').textContent = score; }
         log('✅ Совершенно верно!');
         launchConfetti();
-        try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
+
+        // основной звук победы + звуковая подсказка «крути барабан»
+        try{
+          const s = (Math.random()<0.5 ? winSfx1 : winSfx2);
+          s.currentTime = 0; s.play();
+          setTimeout(()=>{ try{ spinHint.currentTime=0; spinHint.play(); }catch(e){} }, 300);
+        }catch(e){}
 
         round++;
         setTimeout(()=>{
@@ -352,7 +357,6 @@
           document.getElementById('question').textContent = 'Вопрос появится после барабана.';
           document.getElementById('length').textContent = '';
           if(round >= rounds.length){
-            // небольшой тайм-аут для эффекта — и финал
             setTimeout(()=>openGifts(score), 700);
           }
         }, 600);
@@ -441,6 +445,24 @@
     let budget=0, selection={}, pricedGifts=[];
 
     function randRange(min,max){ return Math.floor(Math.random()*(max-min)+min); }
+    const round100 = v => Math.max(100, Math.round(v/100)*100);
+
+    // рассчитываем базовые цены категорий так, чтобы 1+2+3 гарантированно укладывались в бюджет
+    function computeCategoryPrices(B){
+      // базовые доли (с запасом) => суммарно ≈ 98% бюджета
+      let pm = round100(B * 0.44);
+      let ph = round100(B * 0.18);
+      let pt = round100(B * 0.06);
+
+      // если вдруг вышли за бюджет — уменьшаем по 100
+      while (pm + 2*ph + 3*pt > B) {
+        if (pm > 100) pm -= 100;
+        else if (ph > 100) ph -= 100;
+        else if (pt > 100) pt -= 100;
+        else break;
+      }
+      return {pm, ph, pt};
+    }
 
     function openGifts(finalScore){
       budget = finalScore;
@@ -449,13 +471,13 @@
       finalWarn.textContent = '';
       finalIntro.textContent = `Евгений, твой итоговый счёт — ${finalScore} очков. Выбирай призы на эту сумму:`;
 
-      // сформировать цены
+      // базовые цены по категориям (кратные 100 и заведомо помещаются 1+2+3)
+      const {pm, ph, pt} = computeCategoryPrices(budget);
+
+      // сформировать цены (можно добавить лёгкий разброс в пределах категории, но не меняем саму цену категории)
       pricedGifts = gifts.map(g=>{
-        let price=0;
-        if(g.type==='max')  price = randRange(budget*0.9, budget*1.0);
-        if(g.type==='half') price = randRange(budget*0.45, budget*0.55);
-        if(g.type==='third')price = randRange(budget*0.28, budget*0.35);
-        return {...g, price: Math.max(1, Math.round(price))};
+        let price = g.type==='max' ? pm : g.type==='half' ? ph : pt;
+        return {...g, price};
       });
 
       // отрисовка
@@ -474,7 +496,7 @@
         detail.innerHTML = `<img src="${g.img}" alt=""><p>${g.desc}</p>`;
         row.appendChild(detail);
 
-        row.querySelector(`a[data-open="${idx}"]`).addEventListener('click',()=>{
+        row.querySelector(\`a[data-open="\${idx}"]\`).addEventListener('click',()=>{
           detail.style.display = (detail.style.display==='block') ? 'none' : 'block';
         });
         row.querySelector('input[type="checkbox"]').addEventListener('change', onSelectChange);
@@ -501,7 +523,6 @@
 
     function onSelectChange(e){
       const idx = parseInt(e.target.dataset.idx,10);
-      const g = pricedGifts[idx];
       selection[idx] = e.target.checked;
       recompute();
     }
@@ -520,7 +541,6 @@
       spentEl.textContent = spent.toString();
       finalWarn.textContent = '';
 
-      // ограничения
       let warn = '';
       if(spent > budget) warn += 'Перебор бюджета. ';
       if(cntMax > 1) warn += 'Можно выбрать не больше 1 из «Максимум». ';
@@ -548,6 +568,7 @@
   </script>
 </body>
 </html>
+
 
 
 
