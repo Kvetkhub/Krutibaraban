@@ -53,7 +53,6 @@
     .answer.wrong input{border-color:var(--bad)}
     .note{font-size:12px; color:var(--muted)}
 
-    /* Intro modal */
     .intro{position:fixed; inset:0; display:grid; place-items:center; background:rgba(7,10,24,.88); z-index:1000}
     .intro.hide{display:none}
     .ibox{width:min(720px,92vw); background:linear-gradient(180deg, #12265c, #0d1b46); border:1px solid rgba(255,255,255,.12); border-radius:20px; box-shadow:0 28px 90px rgba(0,0,0,.55); padding:18px}
@@ -61,7 +60,6 @@
     .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
     .icta{display:flex; gap:10px; margin-top:12px}
 
-    /* Result modal */
     .modal{position:fixed; inset:0; background:rgba(5,10,25,.86); display:none; place-items:center; z-index:1500}
     .modal.show{display:grid}
     .modal-card{width:min(720px,92vw); border-radius:20px; padding:22px; color:var(--ink);
@@ -75,7 +73,6 @@
     .points{font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(255,220,115,.9)}
     canvas.confetti{position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:2000}
 
-    /* Финальный экран подарков */
     .final{position:fixed; inset:0; background:rgba(0,0,0,.86); display:none; place-items:center; z-index:2200}
     .final.show{display:grid}
     .final-card{width:min(980px,94vw); background:linear-gradient(180deg,#112552,#0d1c45); color:var(--ink);
@@ -144,7 +141,6 @@
           <div class="note">Подсказка: верный ответ подсветится <span style="color:var(--good)">зелёным</span>, неверный — <span style="color:var(--bad)">красным</span>.</div>
         </div>
       </div>
-
     </div>
   </div>
 
@@ -206,29 +202,30 @@
     const wrongSfx = new Audio('pole_letter_wrong.mp3');
     const winSfx1  = new Audio('zrejdbxx.mp3');
     const winSfx2  = new Audio('pole_word_1996.mp3');
-    // новый звук-подсказка после правильного ответа
+    // новый звук-подсказка
     const spinHint = new Audio('spin_hint.mp3');
 
     // ===== Барабан
     const points = [100,200,300,400,500,600,700,800,900,1000];
     const wheel  = document.getElementById('wheel');
     const ctx    = wheel.getContext('2d');
-    let angle=0, spinning=false, spinCount=0;
+    let angle=0, spinning=false, spinCount=0, rafId=null;
 
     function drawWheel(a=0){
-      const W = wheel.width  = wheel.clientWidth  * devicePixelRatio;
-      const H = wheel.height = wheel.clientHeight * devicePixelRatio;
-      const cx=W/2, cy=H/2; const R=Math.min(W,H)/2 - 12*devicePixelRatio;
+      const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1)); // ограничим DPR во имя производительности
+      const W = wheel.width  = Math.max(200, wheel.clientWidth)  * dpr;
+      const H = wheel.height = Math.max(200, wheel.clientHeight) * dpr;
+      const cx=W/2, cy=H/2; const R=Math.min(W,H)/2 - 12*dpr;
       const n = points.length; const arc = 2*Math.PI/n;
       ctx.clearRect(0,0,W,H); ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
 
       for(let i=0;i<n;i++){
         ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,i*arc,(i+1)*arc);
         ctx.fillStyle = (i%2? '#103079':'#142d63'); ctx.fill();
-        ctx.strokeStyle = '#0a1e4f'; ctx.lineWidth = 3*devicePixelRatio; ctx.stroke();
+        ctx.strokeStyle = '#0a1e4f'; ctx.lineWidth = 3*dpr; ctx.stroke();
         // цифры
         ctx.save(); ctx.rotate(i*arc + arc/2); ctx.fillStyle = '#ffdc73';
-        ctx.font = `${Math.max(18*devicePixelRatio,R*0.085)}px system-ui`;
+        ctx.font = `${Math.max(18*dpr,R*0.085)}px system-ui`;
         ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.translate(R*0.75,0); ctx.rotate(Math.PI/2);
         ctx.fillText(points[i].toString(),0,0);
@@ -238,9 +235,9 @@
       const bulbs = 72;
       for(let i=0;i<bulbs;i++){
         const ang = a + (i/bulbs)*Math.PI*2;
-        const bx = Math.cos(ang)*(R+10*devicePixelRatio);
-        const by = Math.sin(ang)*(R+10*devicePixelRatio);
-        ctx.beginPath(); ctx.arc(bx,by,4*devicePixelRatio,0,Math.PI*2);
+        const bx = Math.cos(ang)*(R+10*dpr);
+        const by = Math.sin(ang)*(R+10*dpr);
+        ctx.beginPath(); ctx.arc(bx,by,4*dpr,0,Math.PI*2);
         const on = (Math.floor(Date.now()/120)%2===i%2);
         ctx.fillStyle = on? 'rgba(255,240,150,.95)':'rgba(255,210,77,.85)';
         ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.stroke();
@@ -253,11 +250,13 @@
     function spin(){
       if(spinning) return;
       spinning = true; spinCount++;
+      document.getElementById('spin').disabled = true;
 
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      const baseDur = 12000;
-      const DURATION = baseDur + Math.min(2,spinCount)*2000;
+      // динамика прокрутки
+      const baseDur = 9000; // чуть короче
+      const DURATION = baseDur + Math.min(2,spinCount)*1500;
       const TURNS    = 6 + Math.min(2,spinCount);
 
       const startAngle = angle;
@@ -271,14 +270,29 @@
       const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
       const t0 = performance.now();
 
+      // страховка от зависаний rAF
+      const safety = setTimeout(()=>{
+        if(spinning){
+          cancelAnimationFrame(rafId);
+          spinning=false;
+          finalize(targetIndex);
+        }
+      }, DURATION + 1500);
+
       function step(ts){
         const t = Math.min(1, (ts - t0) / DURATION);
         const eased = easeOutCubic(t);
         angle = startAngle + (endAngle - startAngle) * eased;
         drawWheel(angle);
-        if(t < 1) requestAnimationFrame(step); else { spinning=false; finalize(targetIndex); }
+        if(t < 1){
+          rafId = requestAnimationFrame(step);
+        } else {
+          clearTimeout(safety);
+          spinning=false;
+          finalize(targetIndex);
+        }
       }
-      requestAnimationFrame(step);
+      rafId = requestAnimationFrame(step);
     }
     document.getElementById('spin').addEventListener('click', spin);
 
@@ -293,9 +307,10 @@
         document.getElementById('qScore').textContent = `${p}`;
         document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
         qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
-      }, 2000);
+      }, 800); // быстрее отдаём вопрос
 
       showQuestion();
+      document.getElementById('spin').disabled = false; // уже можно снова крутить после ответа
     }
 
     function log(html){
@@ -343,13 +358,11 @@
         if(!isNaN(p)){ score += p; document.getElementById('score').textContent = score; }
         log('✅ Совершенно верно!');
         launchConfetti();
-
-        // основной звук победы + звуковая подсказка «крути барабан»
         try{
-          const s = (Math.random()<0.5 ? winSfx1 : winSfx2);
-          s.currentTime = 0; s.play();
-          setTimeout(()=>{ try{ spinHint.currentTime=0; spinHint.play(); }catch(e){} }, 300);
+          (Math.random()<0.5 ? winSfx1 : winSfx2).play().catch(()=>{});
         }catch(e){}
+        // подсказка "крути барабан" — вторым звуком
+        setTimeout(()=>{ try{ spinHint.currentTime=0; spinHint.play(); }catch(e){} }, 300);
 
         round++;
         setTimeout(()=>{
@@ -357,9 +370,9 @@
           document.getElementById('question').textContent = 'Вопрос появится после барабана.';
           document.getElementById('length').textContent = '';
           if(round >= rounds.length){
-            setTimeout(()=>openGifts(score), 700);
+            setTimeout(()=>openGifts(score), 600);
           }
-        }, 600);
+        }, 500);
       } else {
         box.classList.remove('correct'); box.classList.add('wrong');
         log('❌ Неверно, попробуй ещё раз.');
@@ -381,6 +394,7 @@
       try{ spinSong.pause(); }catch(e){}
       spinSong.currentTime=0; spinSong.volume=0.3;
       score=0; round=0; angle=0; spinCount=0;
+      document.getElementById('spin').disabled = false;
       document.getElementById('score').textContent='0';
       document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.';
       document.getElementById('question').textContent='Вопрос появится после барабана.';
@@ -444,39 +458,34 @@
 
     let budget=0, selection={}, pricedGifts=[];
 
-    function randRange(min,max){ return Math.floor(Math.random()*(max-min)+min); }
-    const round100 = v => Math.max(100, Math.round(v/100)*100);
+    const floor100 = n => Math.max(100, Math.floor(n/100)*100);
 
-    // рассчитываем базовые цены категорий так, чтобы 1+2+3 гарантированно укладывались в бюджет
-    function computeCategoryPrices(B){
-      // базовые доли (с запасом) => суммарно ≈ 98% бюджета
-      let pm = round100(B * 0.44);
-      let ph = round100(B * 0.18);
-      let pt = round100(B * 0.06);
-
-      // если вдруг вышли за бюджет — уменьшаем по 100
-      while (pm + 2*ph + 3*pt > B) {
-        if (pm > 100) pm -= 100;
-        else if (ph > 100) ph -= 100;
-        else if (pt > 100) pt -= 100;
-        else break;
-      }
-      return {pm, ph, pt};
+    function pricePlan(b){
+      // Цены по категориям (в сотнях) так, чтобы 1*max + 2*half + 3*third <= b
+      let maxUnit  = floor100(b * 0.40);
+      let halfUnit = floor100(b * 0.15);
+      let thirdUnit= floor100(b * 0.10);
+      // если суммарно вышли за бюджет — подрезаем «треть», затем «половину», затем «максимум»
+      let sum = maxUnit + 2*halfUnit + 3*thirdUnit;
+      while(sum > b && thirdUnit > 100){ thirdUnit -= 100; sum = maxUnit + 2*halfUnit + 3*thirdUnit; }
+      while(sum > b && halfUnit  > 100){ halfUnit  -= 100; sum = maxUnit + 2*halfUnit + 3*thirdUnit; }
+      while(sum > b && maxUnit   > 100){ maxUnit   -= 100; sum = maxUnit + 2*halfUnit + 3*thirdUnit; }
+      return { maxUnit, halfUnit, thirdUnit };
     }
 
     function openGifts(finalScore){
-      budget = finalScore;
+      budget = floor100(finalScore); // сам бюджет тоже кратен 100
       budgetEl.textContent = budget.toString();
       spentEl.textContent = '0';
       finalWarn.textContent = '';
-      finalIntro.textContent = `Евгений, твой итоговый счёт — ${finalScore} очков. Выбирай призы на эту сумму:`;
+      finalIntro.textContent = `Евгений, твой итоговый счёт — ${budget} очков. Выбирай призы на эту сумму:`;
 
-      // базовые цены по категориям (кратные 100 и заведомо помещаются 1+2+3)
-      const {pm, ph, pt} = computeCategoryPrices(budget);
+      // фиксируем цены по типам
+      const { maxUnit, halfUnit, thirdUnit } = pricePlan(budget);
 
-      // сформировать цены (можно добавить лёгкий разброс в пределах категории, но не меняем саму цену категории)
+      // назначаем цену каждому подарку в зависимости от типа (все кратно 100)
       pricedGifts = gifts.map(g=>{
-        let price = g.type==='max' ? pm : g.type==='half' ? ph : pt;
+        const price = g.type==='max' ? maxUnit : g.type==='half' ? halfUnit : thirdUnit;
         return {...g, price};
       });
 
@@ -521,6 +530,8 @@
       return 'категория «Треть»';
     }
 
+    let limits = { max:1, half:2, third:3 };
+
     function onSelectChange(e){
       const idx = parseInt(e.target.dataset.idx,10);
       selection[idx] = e.target.checked;
@@ -528,25 +539,20 @@
     }
 
     function recompute(){
-      let spent = 0, cntMax=0, cntHalf=0, cntThird=0;
+      let spent = 0, cnt = {max:0, half:0, third:0};
       Object.entries(selection).forEach(([k,v])=>{
         if(!v) return;
         const g = pricedGifts[parseInt(k,10)];
         spent += g.price;
-        if(g.type==='max') cntMax++;
-        else if(g.type==='half') cntHalf++;
-        else cntThird++;
+        cnt[g.type]++;
       });
 
       spentEl.textContent = spent.toString();
-      finalWarn.textContent = '';
-
       let warn = '';
       if(spent > budget) warn += 'Перебор бюджета. ';
-      if(cntMax > 1) warn += 'Можно выбрать не больше 1 из «Максимум». ';
-      if(cntHalf > 2) warn += 'Можно выбрать не больше 2 из «Половина». ';
-      if(cntThird > 3) warn += 'Можно выбрать не больше 3 из «Треть». ';
-
+      if(cnt.max  > limits.max)  warn += 'Можно выбрать не больше 1 из «Максимум». ';
+      if(cnt.half > limits.half) warn += 'Можно выбрать не больше 2 из «Половина». ';
+      if(cnt.third> limits.third)warn += 'Можно выбрать не больше 3 из «Треть». ';
       finalWarn.textContent = warn.trim();
       btnConfirm.disabled = warn.length>0 || spent===0;
     }
@@ -561,8 +567,8 @@
       const chosen = Object.entries(selection)
         .filter(([,v])=>v)
         .map(([k])=> pricedGifts[parseInt(k,10)]);
-      const names = chosen.map(c=>`${c.name} — ${c.price} очков`).join('\n');
-      alert(`Выбрано:\n${names}\n\nПоздравляем!`);
+      const names = chosen.map(c=>\`\${c.name} — \${c.price} очков\`).join('\\n');
+      alert(\`Выбрано:\\n\${names}\\n\\nПоздравляем!\`);
       closeGifts();
     }
   </script>
