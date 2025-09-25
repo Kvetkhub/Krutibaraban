@@ -34,7 +34,6 @@
 
     .wheel-wrap{position:relative; display:grid; place-items:center; padding:26px; border-radius:24px; background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.1)}
     #wheel{width:100%; max-width:740px; aspect-ratio:1; background:#06112a; border-radius:50%; box-shadow:inset 0 0 50px rgba(0,0,0,.7)}
-    /* верхняя стрелка */
     .pin{position:absolute; top:10px; left:50%; transform:translateX(-50%);
          width:0; height:0; border-left:16px solid transparent; border-right:16px solid transparent;
          border-bottom:26px solid var(--gold2); filter:drop-shadow(0 3px 8px rgba(0,0,0,.6))}
@@ -61,8 +60,9 @@
     .ibox h3{margin:0; color:var(--gold); text-shadow:0 1px 0 #000}
     .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
     .icta{display:flex; gap:10px; margin-top:12px}
+    .skip{margin-left:auto; background:transparent; border:none; color:#fff; opacity:.7; cursor:pointer; text-decoration:underline; font-weight:800}
 
-    /* Result modal (выпавшие очки + вопрос) */
+    /* Result modal */
     .modal{position:fixed; inset:0; background:rgba(5,10,25,.86); display:none; place-items:center; z-index:1500}
     .modal.show{display:grid}
     .modal-card{width:min(720px,92vw); border-radius:20px; padding:22px; color:var(--ink);
@@ -101,6 +101,7 @@
       <div class="icta">
         <button id="introPlay" class="btn">▶️ Воспроизвести</button>
         <button id="introClose" class="btn btn-ghost">Закрыть</button>
+        <button id="introSkip" class="skip">Пропустить</button>
       </div>
     </div>
   </div>
@@ -180,26 +181,47 @@
   </div>
 
   <script>
-    /* ===== Intro (audio + typewriter) ===== */
+    /* ===== Intro (audio + typewriter) — БЕЗ ЗАВИСОНИЙ ===== */
     const introTextFixed = `Здравствуй, Евгений. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан. Правила очень просты. Получай удовольствие и выигрывай призы`;
     const introAudio = new Audio('intro.mp3');
     const intro = document.getElementById('intro');
     const introPlay = document.getElementById('introPlay');
     const introClose = document.getElementById('introClose');
+    const introSkip = document.getElementById('introSkip');
     const introTextEl = document.getElementById('introText');
+
+    const closeIntro = ()=>{
+      intro.classList.add('hide');
+      try{ introAudio.pause(); }catch(e){}
+    };
+    introClose.addEventListener('click', closeIntro);
+    introSkip.addEventListener('click', closeIntro);
+    intro.addEventListener('click', e=>{ if(e.target===intro) closeIntro(); });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeIntro(); });
 
     function typewrite(text, el, speed=96){
       return new Promise(res=>{
         el.textContent=''; let i=0;
-        const t=setInterval(()=>{ el.textContent += text[i++]||''; if(i>=text.length){ clearInterval(t); res(); } }, speed);
+        const t=setInterval(()=>{
+          el.textContent += text[i++]||'';
+          if(i>=text.length){ clearInterval(t); res(); }
+        }, speed);
       });
     }
+
     introPlay.addEventListener('click', async ()=>{
       introPlay.disabled = true;
-      try{ await introAudio.play(); }catch(e){}
-      await typewrite(introTextFixed, introTextEl);
+      // Запускаем ПАРАЛЛЕЛЬНО и не ждём play() (автоплей может быть заблокирован)
+      try{ introAudio.currentTime=0; introAudio.play().catch(()=>{}); }catch(e){}
+      const typed = typewrite(introTextFixed, introTextEl);
+      const ended = new Promise(res=>{
+        introAudio.addEventListener('ended', res, {once:true});
+        // если не стартануло — резолвим по таймеру
+        setTimeout(res, 20000);
+      });
+      // auto-close по первому событию: окончание аудио ИЛИ печати (что наступит позже — не критично, добавим общий timeout)
+      Promise.race([ended, typed, new Promise(r=>setTimeout(r, 22000))]).then(closeIntro);
     });
-    introClose.addEventListener('click', ()=>{ intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){} });
 
     /* ===== Звуки ===== */
     const spinSong = new Audio('song.mp3'); spinSong.loop = true; spinSong.preload = 'auto'; spinSong.volume = 0.3;
@@ -256,8 +278,8 @@
       spinning = true;
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      // Стабильная «сочная» прокрутка КАЖДЫЙ раз (без накопления)
-      const DURATION = 12000 + Math.random()*2500;     // ~12–14.5с
+      // Стабильная «сочная» прокрутка каждый раз
+      const DURATION = 12000 + Math.random()*2500;      // ~12–14.5с
       const TURNS    = 7 + Math.floor(Math.random()*2); // 7–8 оборотов
 
       const startAngle = norm(angle);
@@ -294,7 +316,7 @@
         document.getElementById('qScore').textContent = `${p}`;
         document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
         qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
-      }, 800); // быстрее отклик — меньше ощущение «зависания»
+      }, 800);
 
       showQuestion();
     }
@@ -452,9 +474,9 @@
 
       // Диапазоны цен — всё кратно 100, и «треть» легко взять 3 штуки
       const ranges = {
-        max:   [0.92, 1.00], // ~92–100% effBudget
-        half:  [0.46, 0.54], // ~половина
-        third: [0.30, 0.31], // три по трети ≈ 90–93% effBudget
+        max:   [0.92, 1.00],
+        half:  [0.46, 0.54],
+        third: [0.30, 0.31],
       };
 
       pricedGifts = gifts.map(g=>{
