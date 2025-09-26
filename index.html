@@ -1,6 +1,3 @@
-куда-то пропала первая заставка с приветствованием, и так же неполадка с барабаном. иногда он еле крутится. Сделай чтобы он всегда обильно крутился. только сделай аккуратно, чтобы не возникло других ошибок.  я прикрепил прошлую версию кода, где не было супер игры, но заставка работала, а текущую (там не работает заставка с приветстванием, но есть супер игра) можно глянуть на сайте - https://krutibaraban.netlify.app/
-
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -221,7 +218,7 @@
     const winSfx1  = new Audio('zrejdbxx.mp3');
     const winSfx2  = new Audio('pole_word_1996.mp3');
 
-    // ===== Wheel
+    // ===== Барабан (Canvas)
     const points = [100,200,300,400,500,600,700,800,900,1000];
     const wheel  = document.getElementById('wheel');
     const ctx    = wheel.getContext('2d');
@@ -263,11 +260,10 @@
     function spin(){
       if(spinning) return;
       spinning = true;
-
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      const DURATION = 10000;     // фиксированно ~10с каждый раз
-      const TURNS    = 7;         // фиксированное число оборотов
+      const DURATION = 10000;  // стабильные ~10s каждый раз
+      const TURNS    = 7;
       const startAngle = angle;
       const n = points.length; const arc = 2*Math.PI/n;
 
@@ -290,23 +286,6 @@
     }
     document.getElementById('spin').addEventListener('click', spin);
 
-    function finalize(idx){
-      try{ spinSong.volume = 0.3; if (spinSong.paused) spinSong.play(); }catch(e){}
-      const p = points[idx];
-      log(`🎯 Выпало: <b>${p}</b> очков`);
-      document.getElementById('rule').innerHTML = `Твои очки за барабан: <span class="points">${p}</span>. Ответь на вопрос!`;
-
-      const r = rounds[round];
-      setTimeout(()=>{
-        document.getElementById('qTitle').textContent = 'Твои баллы';
-        document.getElementById('qScore').textContent = `${p}`;
-        document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
-        qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
-      }, 1200);
-
-      showQuestion();
-    }
-
     function log(html){
       const box=document.getElementById('log');
       const d=document.createElement('div');
@@ -314,7 +293,7 @@
       box.prepend(d);
     }
 
-    // ===== Questions
+    // ===== Вопросы
     const rounds = [
       { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
       { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
@@ -323,6 +302,7 @@
       { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК'] }
     ];
     let round = 0; let score = 0;
+    let superPhase = false; // <— режим супер-игры
 
     function normalizeRu(s){ return s.trim().toUpperCase().replace(/Ё/g,'Е'); }
     function getAcceptList(a){ return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)]; }
@@ -330,8 +310,13 @@
     function showQuestion(){
       const r = rounds[round];
       if(!r){
-        // все вопросы пройдены — короткая пауза и финальное видео, потом подарки
-        endGameWithVideo();
+        // все обычные вопросы пройдены — переходим в супер-игру
+        superPhase = true;
+        document.getElementById('rule').innerHTML = 'СУПЕР ИГРА: крути барабан и ответь на вопрос!';
+        document.getElementById('question').textContent = 'Супер-игра: ответь на финальный вопрос и удвой очки.';
+        document.getElementById('length').textContent  = '';
+        const input = document.getElementById('answer'); input.value='';
+        document.getElementById('answerBox').classList.remove('correct','wrong');
         return;
       }
       document.getElementById('question').textContent = `Вопрос: ${r.q}`;
@@ -341,11 +326,74 @@
       document.getElementById('answerBox').classList.remove('correct','wrong');
     }
 
+    function finalize(idx){
+      try{ spinSong.volume = 0.3; if (spinSong.paused) spinSong.play(); }catch(e){}
+      const p = points[idx];
+      log(`🎯 Выпало: <b>${p}</b> очков`);
+
+      // Текст в панели
+      document.getElementById('rule').innerHTML = superPhase
+        ? `СУПЕР ИГРА: <span class="points">${p}</span> очков на барабане. Ответь на финальный вопрос!`
+        : `Твои очки за барабан: <span class="points">${p}</span>. Ответь на вопрос!`;
+
+      // Показ модалки с вопросом
+      setTimeout(()=>{
+        if (superPhase){
+          document.getElementById('qTitle').textContent = 'СУПЕР ИГРА';
+          document.getElementById('qScore').textContent = `${p}`;
+          document.getElementById('qText').innerHTML = 'очки удваиваются<br>Вопрос: Белорусский дипломатический подарок, который всегда принимают без визы. Что это?';
+        } else {
+          const r = rounds[round];
+          document.getElementById('qTitle').textContent = 'Твои баллы';
+          document.getElementById('qScore').textContent = `${p}`;
+          document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : ''}"`;
+        }
+        qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
+      }, 1200);
+
+      // Запоминаем текущие очки рулетки в data-атрибуте (если надо использовать)
+      qModal.dataset.spinPoints = String(p);
+
+      // Показать сам вопрос справа (для обычных раундов)
+      if(!superPhase) showQuestion();
+    }
+
     function checkAnswer(){
-      const r = rounds[round]; if(!r) return;
-      const got  = normalizeRu(document.getElementById('answer').value);
-      const list = getAcceptList(r.a);
       const box  = document.getElementById('answerBox');
+      const got  = normalizeRu(document.getElementById('answer').value);
+
+      if (superPhase){
+        // принимаем только "БУЛЬБА"
+        if (got === 'БУЛЬБА'){
+          box.classList.remove('wrong'); box.classList.add('correct');
+          log('🏆 Супер-игра: правильный ответ! Очки удвоены.');
+          try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
+          // удвоение очков
+          score = score * 2;
+          document.getElementById('score').textContent = score;
+
+          // закрываем модалку и через 3 сек останавливаем музыку и показываем видео
+          qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
+          setTimeout(()=>{
+            try{ spinSong.pause(); }catch(e){}
+            videoModal.classList.add('show'); videoModal.setAttribute('aria-hidden','false');
+            try{ finalVideo.currentTime = 0; finalVideo.play(); }catch(e){}
+          }, 3000);
+          // выходим из супер-режима
+          superPhase = false;
+        } else {
+          // неверный ответ — показываем сообщение в модалке, не закрываем
+          try{ wrongSfx.currentTime=0; wrongSfx.play(); }catch(e){}
+          const t = document.getElementById('qText');
+          t.innerHTML = 'Эхх, вы совершили ошибку. Удваивание очков отменяется. Попробуйте снова.';
+          box.classList.remove('correct'); box.classList.add('wrong');
+        }
+        return;
+      }
+
+      // ===== Обычные вопросы
+      const r = rounds[round]; if(!r) return;
+      const list = getAcceptList(r.a);
 
       if(list.includes(got)){
         box.classList.remove('wrong'); box.classList.add('correct');
@@ -357,12 +405,16 @@
 
         round++;
         setTimeout(()=>{
-          document.getElementById('rule').textContent = 'Снова крути барабан!';
-          document.getElementById('question').textContent = 'Вопрос появится после барабана.';
-          document.getElementById('length').textContent = '';
+          // если все обычные вопросы закончились — подготовка к супер-игре
           if(round >= rounds.length){
-            // дальше — финальное видео => подарки
-            // ничего не делаем тут — showQuestion вызовется из finalize следующего спина не будет, т.к. спинов больше нет
+            document.getElementById('rule').textContent = 'СУПЕР ИГРА: крути барабан и ответь на финальный вопрос!';
+            document.getElementById('question').textContent = 'Супер-игра: ответь на финальный вопрос и удвой очки.';
+            document.getElementById('length').textContent = '';
+            superPhase = true;
+          } else {
+            document.getElementById('rule').textContent = 'Снова крути барабан!';
+            document.getElementById('question').textContent = 'Вопрос появится после барабана.';
+            document.getElementById('length').textContent = '';
           }
         }, 500);
       } else {
@@ -374,18 +426,25 @@
     document.getElementById('submit').addEventListener('click', checkAnswer);
     document.getElementById('answer').addEventListener('keydown', e=>{ if(e.key==='Enter') checkAnswer(); });
 
-    // Q modal controls
+    // Result modal controls
     const qModal = document.getElementById('qModal');
+    const videoModal = document.getElementById('videoModal');
+    const finalVideo = document.getElementById('finalVideo');
+    const videoClose = document.getElementById('videoClose');
+
     document.getElementById('qClose').addEventListener('click',()=>{
-      qModal.classList.remove('show');
-      qModal.setAttribute('aria-hidden','true');
-      document.getElementById('answer').focus();
+      // Закрываем модалку вопроса; если это супер-игра, оставляем её открытой до правильного ответа
+      if (!superPhase){
+        qModal.classList.remove('show');
+        qModal.setAttribute('aria-hidden','true');
+        document.getElementById('answer').focus();
+      }
     });
 
     document.getElementById('reset').addEventListener('click', ()=>{
       try{ spinSong.pause(); }catch(e){}
       spinSong.currentTime=0; spinSong.volume=0.3;
-      score=0; round=0; angle=0;
+      score=0; round=0; angle=0; superPhase=false;
       document.getElementById('score').textContent='0';
       document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.';
       document.getElementById('question').textContent='Вопрос появится после барабана.';
@@ -396,7 +455,7 @@
       drawWheel(0); document.getElementById('log').innerHTML='';
     });
 
-    // ===== Confetti
+    // ===== Конфетти
     function launchConfetti(){
       const c=document.createElement('canvas'); c.className='confetti'; document.body.appendChild(c);
       const cx=c.getContext('2d'); const DPR=window.devicePixelRatio||1;
@@ -422,55 +481,33 @@
       draw();
     }
 
-    // ===== Final video then gifts
-    const videoModal = document.getElementById('videoModal');
-    const finalVideo = document.getElementById('finalVideo');
-    const videoClose = document.getElementById('videoClose');
-
-    function endGameWithVideo(){
-      // маленькая пауза перед показом видео
-      setTimeout(()=>{
-        try{ spinSong.pause(); }catch(e){}
-        videoModal.classList.add('show'); videoModal.setAttribute('aria-hidden','false');
-        try{ finalVideo.currentTime = 0; finalVideo.play(); }catch(e){}
-      }, 2000); // пауза перед видео
-    }
-
+    // ===== Видео -> подарки (оставлено как раньше)
     function closeVideoAndOpenGifts(){
       try{ finalVideo.pause(); }catch(e){}
       videoModal.classList.remove('show'); videoModal.setAttribute('aria-hidden','true');
       openGifts(score);
     }
-
     videoClose.addEventListener('click', closeVideoAndOpenGifts);
-    finalVideo.addEventListener('ended', ()=> {
-      // по окончании видео просто показываем кнопку "Закрыть" (она уже есть),
-      // пользователь сам решит — закрыть сейчас или пересмотреть.
-    });
+    finalVideo.addEventListener('ended', closeVideoAndOpenGifts);
 
-    // ===== Gifts
+    // ===== Подарки (без изменений логики выбора)
     const giftsSource = [
-      // (4/4)
       {name:'Горный велосипед', tier:'4/4', desc:'Согласовывается индивидуально'},
       {name:'Прыжок с парашютом в любой точке мира', tier:'4/4', desc:'Даётся неограниченный по времени купон для прыжка в любом месте'},
       {name:'Вайбовая колонка Marshall', tier:'4/4', link:'https://catalog.onliner.by/wspeaker/marshall/acton2bl1'},
       {name:'E-book Amazon последняя версия', tier:'4/4', link:'https://kindle.by/devices/amazon-kindle-paperwhite-6-12-generation-16gb-black'},
-
-      // (2/4)
       {name:'Алисина колонка (AI edition)', tier:'2/4', link:'https://catalog.onliner.by/wspeaker/yandex/yanstmidiblk'},
-      {name:'Премиум наушники Realme (последняя модель)', tier:'2/4', link:'https://market.yandex.ru/card/naushniki-besprovodnyye-realme-buds-air7air7-pro-bluetooth-c-shumopodavleniyem/4598149761?do-waremd5=HbJaYobNJ7zDtdV7Toe1cA&sponsored=1&cpc=eGiwCaltmhbiDEhIogGOZIfhhnejIxuiwGDOjvCmOD96swKkTPv0JNMt3Y_3XeEVhoZRhyBb3lFaFeXVs_b8J_B4S0xOmRIFQX1_kkYxqPec5dOivpIKH5Qp_dx6W5cBBsJ5G9S-cDrZVhQUWYHoU6OhXmMS7JoBeoYBaDp3Hk2l8HVmkfL3JBIH_Pc6cO5mIehnQ0WUdoxTNrLF-i7dTS_ikl1mc8F6gSYWH8CSbt-MkMD9ubOh2ZwFHs2QpJHZ3jJAfqiAPSdUYEOh8jH3q2iIMelPWNb1Izzui_XkyfoKxMvHSlnWlBhA9SjDfvIakGT3Wf5--GfZPHH4T-pIpvKlpF_6gXTNVzE3J91RCm_DukkBxCeGO9vwd1OgfrrKt87R4YnH7fv4sjyX1gxgDg3av3PX7f_BxLUhHUybypnmElNdaNAsCZCLTiNDgFOjTFV6anh9J2EK9L5IxKs0dAm3A5Y28PLVFah5U3zC6OrzdmHhN_jbYXCEOLXJTLBxHkx3RyFlVcG0GlJt7LmNVfNB9Wq5R0xNX2SVu5vVI1lWJ0Cm79U6qU79eewAgvXaHGfWhXvfCqgVp_WbklR2Ew%2C%2C&ogV=-4'},
+      {name:'Премиум наушники Realme (последняя модель)', tier:'2/4', link:'https://market.yandex.ru/card/naushniki-besprovodnyye-realme-buds-air7air7-pro-bluetooth-c-shumopодавлениeм/4598149761?ogV=-4'},
       {name:'Скидка 30% на авиабилет в любую страну', tier:'2/4', desc:'Скидка предоставляется по запросу и приходит в виде USDT'},
       {name:'Отдых в баньке «Избушка»', tier:'2/4', link:'https://www.saunaminska.by/izbushka.htm'},
       {name:'Поездка в национальный парк Нарочаны на выходные', tier:'2/4', desc:'Не, ну можем и такое организовать :))'},
       {name:'Очки с камерой 4K Indigo Polarized', tier:'2/4', link:'https://catalog.onliner.by/actioncamera/xtry/xtg113fhdindigop'},
-
-      // (1/4)
       {name:'Аэрогриль Брайер «Йооу эдишн BR2039»', tier:'1/4', link:'https://brayer.ru/catalog/aerogrili/aerogril-brayer-br2039/'},
       {name:'Электрическая зубная щётка Oclean', tier:'1/4', link:'https://catalog.onliner.by/toothbrush/oclean/oclexproelitegre'},
-      {name:'Кольцо для отслеживания сна Mijia', tier:'1/4', link:'https://market.yandex.ru/card/xiaomi-smart-ring-bluetooth-black-size-11/4589470934?do-waremd5=kQiB0GAlTYetiYIEuMTFzg&cpc=btYqqIlf1j_d006RY_IKbrxejstrKi14H-JgxeCaABVEF91Fgc40usZYfWyRTrF1zPedQGfOsBBGV43jY9Iw0qGtR31vhk9iYnCuu51y3BQSCAEILqQw3mP09xEV3CylBV1vaLCToRDCyBnwNhewdniY9JxMsdNAffqda-1C3hiRULh5EZOwd9H924jOBjLkV4bpKORVAunl8TWpVmh_UUKs0S_Y62aHCO78I6u53t7UPOI-zCCBj8aDk523MuWEMwu1O1iejiwdTVpcOLIJ7Vdw9upueL2tD_rjcm0clDSFPp4fzYDNg9DKCbN89rMla0GeCztd83oXmxGkidxCcaARwt-7r63WL2Ra5alJkv-WgEzYQAIOz9fGeifF7Q-Rk2ylM6yYuhBRHBlYfS9oGWmGfldT7xVszxKBZQUg8jonLhv0uinaUDuBnpLrfzcoD1SLxqh6lu8__72lQUmK3U7eOI-Lbnp2J-NFVBAUrAlrrYNPDjAtJ0NE4f-vwoMHeI-WHiV2MA3fMeOjo6MwCnu8qiFk1EdY4JUOcyE4zRWEpt4Yj97NQgQeogMHUkXw&ogV=-4'}
+      {name:'Кольцо для отслеживания сна Mijia', tier:'1/4', link:'https://market.yandex.ru/card/xiaomi-smart-ring-bluetooth-black-size-11/4589470934?ogV=-4'}
     ];
 
-    const finalModal = document.getElementById('finalModal');
+    const finalModalEl = document.getElementById('finalModal');
     const giftListEl = document.getElementById('giftList');
     const spentEl = document.getElementById('spent');
     const budgetEl = document.getElementById('budget');
@@ -484,11 +521,9 @@
 
     function roundTo100(x){ return Math.max(100, Math.round(x/100)*100); }
     function randRange(min,max){ return Math.random()*(max-min)+min; }
-
     function priceByTier(tier, total){
       if(tier==='4/4') return roundTo100(randRange(total*0.90, total*1.00));
       if(tier==='2/4') return roundTo100(randRange(total*0.40, total*0.48));
-      // 1/4
       return roundTo100(randRange(total*0.20, total*0.25));
     }
 
@@ -499,13 +534,11 @@
       finalWarn.textContent = '';
       finalIntro.textContent = `Евгений, твой итоговый счёт — ${finalScore} очков. Выбирай призы на эту сумму:`;
 
-      // цены
       pricedGifts = giftsSource.map(g=>{
         const price = priceByTier(g.tier, budget);
         return {...g, price};
       });
 
-      // рендер
       giftListEl.innerHTML = '';
       selection = {};
       pricedGifts.forEach((g,idx)=>{
@@ -536,12 +569,12 @@
       btnClear.onclick = clearSelection;
       btnClose.onclick = ()=>closeGifts();
 
-      finalModal.classList.add('show'); finalModal.setAttribute('aria-hidden','false');
+      finalModalEl.classList.add('show'); finalModalEl.setAttribute('aria-hidden','false');
     }
 
     function closeGifts(){
-      finalModal.classList.remove('show');
-      finalModal.setAttribute('aria-hidden','true');
+      finalModalEl.classList.remove('show');
+      finalModalEl.setAttribute('aria-hidden','true');
     }
 
     function onSelectChange(e){
@@ -582,7 +615,6 @@
   </script>
 </body>
 </html>
-
 
 
 
