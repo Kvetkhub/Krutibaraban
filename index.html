@@ -1,713 +1,587 @@
+куда-то пропала первая заставка с приветствованием, и так же неполадка с барабаном. иногда он еле крутится. Сделай чтобы он всегда обильно крутился. только сделай аккуратно, чтобы не возникло других ошибок.  я прикрепил прошлую версию кода, где не было супер игры, но заставка работала, а текущую (там не работает заставка с приветстванием, но есть супер игра) можно глянуть на сайте - https://krutibaraban.netlify.app/
+
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ПОЛЕ ЧУДЕС — Юбилейная игра для Евгения</title>
   <style>
-    body {
-      background: radial-gradient(circle, #002b5b, #000);
-      color: #fff;
-      font-family: sans-serif;
-      margin: 0;
-      text-align: center;
+    :root{
+      --ink:#f7f9ff; --muted:#b9c6ff;
+      --gold:#ffdc73; --gold2:#ffcc33; --gold3:#b98a00; --blue:#0f1d47; --blue2:#0a1535; --card:#0b1f4a;
+      --good:#4ee6a3; --bad:#ff7a7a;
     }
-    /* Modal overlay style */
-    .modal {
-      display: none;
-      position: fixed; top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(5px);
-      /* center content */
-      display: flex; justify-content: center; align-items: center;
-      z-index: 1000;
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--ink); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      background:url('unnamed.jpg') repeat fixed center/220px #06122b;
     }
-    .modal-content {
-      background: #1c5172;
-      border-radius: 8px;
-      padding: 20px;
-      max-width: 600px;
-      width: 90%;
-      text-align: center;
-      box-shadow: 0 0 10px #000;
-    }
-    .modal-content h2 {
-      margin: 0 0 10px;
-    }
-    .modal-content button {
-      margin: 10px 5px 0;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 4px;
-      background: #444;
-      color: #fff;
-      font-size: 1em;
-      cursor: pointer;
-    }
-    .modal-content button:hover {
-      background: #555;
-    }
-    /* Super-game modal text slightly larger */
-    #superModal .modal-content {
-      font-size: 1.2em;
-    }
-    /* Main game area */
-    #gameArea {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    #questionText {
-      font-size: 1.2em;
-      margin: 10px 0;
-    }
-    #puzzleWord {
-      font-size: 2em;
-      font-family: monospace;
-      letter-spacing: 0.2em;
-      white-space: pre;
-      margin: 10px 0 20px;
-    }
-    #hintText {
-      font-size: 0.9em;
-      font-style: italic;
-      color: #ccc;
-      margin-bottom: 20px;
-    }
-    #scoreBoard {
-      text-align: right;
-      margin: 10px;
-      font-weight: bold;
-    }
-    #scoreBoard span {
-      color: #ffd700;
-      font-size: 1.2em;
-    }
-    /* Wheel and pointer */
-    #wheelContainer {
-      position: relative;
-      display: inline-block;
-      margin: 20px 0;
-    }
-    #wheel {
-      width: 60vmin;
-      max-width: 100%;
-      display: block;
-    }
-    #pointer {
-      position: absolute;
-      top: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 15px solid transparent;
-      border-right: 15px solid transparent;
-      border-top: 20px solid red;
-      /* ensure pointer on top of wheel */
-      z-index: 1;
-    }
-    /* Input and button for guessing */
-    #guessInput {
-      font-size: 1em;
-      padding: 5px;
-      width: 200px;
-      max-width: 80%;
-      text-align: center;
-    }
-    #guessBtn {
-      padding: 6px 12px;
-      margin-left: 5px;
-      font-size: 1em;
-      border: none;
-      border-radius: 4px;
-      background: #444;
-      color: #fff;
-      cursor: pointer;
-    }
-    #guessBtn:hover {
-      background: #555;
-    }
-    /* Flash effect for wrong guess */
-    #guessInput.wrong {
-      background: #ff4444;
-      color: #fff;
-    }
-    /* Puzzle solved highlight */
-    #puzzleWord.solved {
-      color: #4ef442;
-    }
-    /* Prize selection section */
-    #prizeSection {
-      display: none;
-      padding: 20px;
-      text-align: center;
-    }
-    #prizeSection h2 {
-      margin-top: 0;
-    }
-    #prizeSection table {
-      width: 100%;
-      max-width: 600px;
-      margin: 10px auto;
-      border-collapse: collapse;
-      color: #fff;
-    }
-    #prizeSection th, #prizeSection td {
-      border: 1px solid #fff;
-      padding: 8px;
-    }
-    #prizeSection th {
-      background: #1c5172;
-    }
-    #prizeSection td:nth-child(2), #prizeSection th:nth-child(2) {
-      text-align: right;
-    }
-    #prizeSection td:nth-child(3), #prizeSection th:nth-child(3) {
-      text-align: center;
-    }
-    #prizeSection button {
-      margin-top: 10px;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 4px;
-      background: #444;
-      color: #fff;
-      font-size: 1em;
-      cursor: pointer;
-    }
-    #prizeSection button:hover {
-      background: #555;
-    }
+    .veil{min-height:100%; backdrop-filter: blur(1px); background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.75));}
+    .wrap{max-width:1180px; margin:0 auto; padding:24px}
+
+    .title{font-size:34px; font-weight:900; letter-spacing:2px; text-transform:uppercase; color:var(--gold);
+      text-shadow:0 2px 0 #000, 0 7px 18px rgba(0,0,0,.4)}
+    .sub{color:var(--muted); font-size:13px}
+
+    .grid{display:grid; grid-template-columns:1.2fr 0.9fr; gap:18px; margin-top:16px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.1); border-radius:20px; box-shadow:0 18px 60px rgba(0,0,0,.4)}
+    .pad{padding:18px}
+    .bar{display:flex; align-items:center; justify-content:space-between; gap:12px}
+    .gold{color:var(--gold)}
+    .btn{appearance:none; border:none; cursor:pointer; font-weight:900; letter-spacing:.3px; color:#1a1400; background:linear-gradient(180deg, var(--gold), var(--gold2)); border-radius:14px; padding:10px 14px; box-shadow:0 4px 0 var(--gold3), 0 10px 26px rgba(0,0,0,.3)}
+    .btn:active{transform:translateY(1px)}
+    .btn-ghost{background:linear-gradient(180deg,#142458,#0e1a44); color:var(--ink); border:1px solid rgba(255,255,255,.12)}
+
+    .wheel-wrap{position:relative; display:grid; place-items:center; padding:26px; border-radius:24px; background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.1)}
+    #wheel{width:100%; max-width:740px; aspect-ratio:1; background:#06112a; border-radius:50%; box-shadow:inset 0 0 50px rgba(0,0,0,.7)}
+    .pin{position:absolute; top:10px; left:50%; transform:translateX(-50%);
+         width:0; height:0; border-left:16px solid transparent; border-right:16px solid transparent;
+         border-bottom:26px solid var(--gold2); filter:drop-shadow(0 3px 8px rgba(0,0,0,.6))}
+    .cap{position:absolute; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #fff, #ffe9a3 40%, #ffcf4d 60%, #d2a500 100%); box-shadow: inset 0 0 30px rgba(0,0,0,.35), 0 6px 24px rgba(0,0,0,.5); display:grid; place-items:center}
+    .cap .btn{border-radius:50%; padding:18px 18px}
+
+    .panel{min-height:84px; display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .panel .rule{font-weight:800}
+    .log{margin-top:10px; height:110px; overflow:auto; padding:8px 12px; background:#0c1130; border-radius:12px; border:1px solid rgba(255,255,255,.08)}
+
+    .qbox{min-height:210px}
+    .q{font-weight:800}
+    .word-len{opacity:.8; font-size:13px}
+    .answer{display:flex; gap:8px; margin-top:10px}
+    .answer input{flex:1; padding:12px 14px; border-radius:12px; border:2px solid transparent; background:#0f1538; color:var(--ink); font-weight:700; letter-spacing:.5px}
+    .answer.correct input{border-color:var(--good)}
+    .answer.wrong input{border-color:var(--bad)}
+    .note{font-size:12px; color:var(--muted)}
+
+    /* Intro modal */
+    .intro{position:fixed; inset:0; display:grid; place-items:center; background:rgba(7,10,24,.88); z-index:1000}
+    .intro.hide{display:none}
+    .ibox{width:min(720px,92vw); background:linear-gradient(180deg, #12265c, #0d1b46); border:1px solid rgba(255,255,255,.12); border-radius:20px; box-shadow:0 28px 90px rgba(0,0,0,.55); padding:18px}
+    .ibox h3{margin:0; color:var(--gold); text-shadow:0 1px 0 #000}
+    .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
+    .icta{display:flex; gap:10px; margin-top:12px}
+
+    /* Q modal */
+    .modal{position:fixed; inset:0; background:rgba(5,10,25,.86); display:none; place-items:center; z-index:1500}
+    .modal.show{display:grid}
+    .modal-card{width:min(720px,92vw); border-radius:20px; padding:22px; color:var(--ink);
+      background:linear-gradient(180deg,#12265c,#0d1b46);
+      border:1px solid rgba(255,255,255,.12); box-shadow:0 28px 90px rgba(0,0,0,.55); text-align:center}
+    .modal-title{margin:0 0 8px; color:var(--gold); font-weight:900}
+    .modal-text{font-weight:800; margin:6px 0 14px}
+    .bigScore{font-weight:900; font-size:clamp(42px, 9vw, 120px); line-height:1; color:var(--gold);
+      text-shadow:0 2px 0 #000,0 10px 26px rgba(0,0,0,.35)}
+
+    .points{font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(255,220,115,.9)}
+    canvas.confetti{position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:2000}
+
+    /* Final gifts */
+    .final{position:fixed; inset:0; background:rgba(0,0,0,.86); display:none; place-items:center; z-index:2200}
+    .final.show{display:grid}
+    .final-card{width:min(980px,94vw); background:linear-gradient(180deg,#112552,#0d1c45); color:var(--ink);
+      border:1px solid rgba(255,255,255,.12); border-radius:20px; box-shadow:0 28px 90px rgba(0,0,0,.55); padding:18px}
+    .final-title{margin:0; color:var(--gold); font-weight:900}
+    .gift-grid{display:grid; gap:10px; margin-top:14px}
+    .gift-row{display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; background:#0b1636; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px}
+    .gift-row a{color:var(--gold); text-decoration:underline; cursor:pointer}
+    .final-bar{display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap}
+    .pill{background:#0e1a44; border:1px solid rgba(255,255,255,.15); border-radius:999px; padding:8px 12px; font-weight:800}
+    .warn{color:#ff7a7a}
+
+    /* Fullscreen video */
+    .vmodal{position:fixed; inset:0; background:rgba(0,0,0,.96); display:none; place-items:center; z-index:3000}
+    .vmodal.show{display:grid}
+    .vwrap{position:relative; width:min(1280px,96vw)}
+    .vwrap video{width:100%; height:auto; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.6)}
+    .vclose{position:absolute; top:-44px; right:0}
   </style>
 </head>
 <body>
-  <!-- Intro Modal -->
-  <div id="introModal" class="modal" style="display: flex;">
-    <div class="modal-content">
-      <h2>📢 Сообщение перед игрой</h2>
-      <p id="introText"></p>
-      <button id="playIntroBtn">Воспроизвести</button>
-      <button id="skipIntroBtn">Закрыть</button>
-    </div>
-  </div>
-  <!-- Super Game Modal -->
-  <div id="superModal" class="modal">
-    <div class="modal-content">
-      <p id="superPrompt"><strong>Супер-игра!</strong> Очки за правильный ответ удваиваются. Ответьте правильно: <em>Белорусский дипломатический подарок, который всегда принимают без визы. Что это?</em></p>
-      <input type="text" id="superInput" placeholder="Ваш ответ">
-      <button id="superSubmitBtn">Ответить</button>
-      <p id="superError" style="color: #ff7777; display: none;"></p>
-    </div>
-  </div>
-  <!-- Final Message Modal -->
-  <div id="finalModal" class="modal">
-    <div class="modal-content" id="finalMessageContent">
-      <!-- Final message will be set via script -->
-      <button id="finalCloseBtn">Закрыть</button>
+  <!-- Intro -->
+  <div id="intro" class="intro">
+    <div class="ibox">
+      <h3>🎙️ Приветствие нашего уважаемого гостя — Евгена</h3>
+      <div id="introText" class="itype"></div>
+      <div class="icta">
+        <button id="introPlay" class="btn">▶️ Воспроизвести</button>
+        <button id="introClose" class="btn btn-ghost">Закрыть</button>
+      </div>
     </div>
   </div>
 
-  <!-- Main Game Area -->
-  <div id="gameArea">
-    <div id="scoreBoard">Очки: <span id="score">0</span></div>
-    <p id="questionText"></p>
-    <p id="puzzleWord"></p>
-    <p id="hintText">Подсказка: верный ответ подсветится зелёным, неверный — красным.</p>
-    <div id="wheelContainer">
-      <img id="wheel" src="wheel.png" alt="Wheel">
-      <div id="pointer"></div>
-    </div>
-    <div>
-      <button id="spinBtn">Крутить барабан</button>
-    </div>
-    <div style="margin-top: 15px;">
-      <input type="text" id="guessInput" placeholder="Ваша буква или слово">
-      <button id="guessBtn">Ответить</button>
+  <div class="veil">
+    <div class="wrap">
+      <div class="bar">
+        <div>
+          <div class="title">ПОЛЕ ЧУДЕС — Юбилейное шоу</div>
+          <div class="sub">Крути барабан, отвечай на вопросы, будь счастлив, родной</div>
+        </div>
+        <div class="bar">
+          <button id="reset" class="btn btn-ghost">Сброс</button>
+        </div>
+      </div>
+
+      <!-- Top panel -->
+      <div class="card pad panel" id="panel">
+        <div class="rule" id="rule">Правила: нажми «Крутить», дождись очков и отвечай на вопрос.</div>
+        <div>Счёт: <span id="score" class="points">0</span></div>
+      </div>
+
+      <div class="grid">
+        <!-- Left: Wheel -->
+        <div class="card pad">
+          <div class="wheel-wrap">
+            <div class="pin"></div>
+            <canvas id="wheel"></canvas>
+            <div class="cap"><button id="spin" class="btn">🎡 Крутить</button></div>
+          </div>
+          <div class="log" id="log"></div>
+        </div>
+
+        <!-- Right: Question / Answer -->
+        <div class="card pad qbox">
+          <div class="q" id="question">Вопрос появится после барабана.</div>
+          <div class="word-len" id="length"></div>
+          <div class="answer" id="answerBox">
+            <input id="answer" type="text" placeholder="Введите слово" />
+            <button id="submit" class="btn">Ответить</button>
+          </div>
+          <div class="note">Подсказка: верный ответ подсветится <span style="color:var(--good)">зелёным</span>, неверный — <span style="color:var(--bad)">красным</span>.</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Prize Selection Section -->
-  <div id="prizeSection">
-    <h2>Выберите подарки</h2>
-    <p>Ваш бюджет: <span id="budgetTotal">0</span> очков.</p>
-    <table>
-      <thead>
-        <tr><th>Подарок</th><th>Цена, очки</th><th>Выбрать</th></tr>
-      </thead>
-      <tbody id="prizesList">
-        <tr><td>Готовня (набор техники для кухни)</td><td>5000</td><td><input type="checkbox" class="prizeCheck" data-cost="5000"></td></tr>
-        <tr><td>Хочу всё знать (ноутбук)</td><td>4000</td><td><input type="checkbox" class="prizeCheck" data-cost="4000"></td></tr>
-        <tr><td>Бай-бай (спальный гарнитур)</td><td>3000</td><td><input type="checkbox" class="prizeCheck" data-cost="3000"></td></tr>
-        <tr><td>Близкий друг (смарт-телевизор)</td><td>2000</td><td><input type="checkbox" class="prizeCheck" data-cost="2000"></td></tr>
-        <tr><td>Словарь (энциклопедия)</td><td>1000</td><td><input type="checkbox" class="prizeCheck" data-cost="1000"></td></tr>
-        <tr><td>Сувенир (фирменная кружка)</td><td>500</td><td><input type="checkbox" class="prizeCheck" data-cost="500"></td></tr>
-      </tbody>
-    </table>
-    <p>Выбрано: <span id="selectedSum">0</span> очков. Осталось: <span id="remainingSum">0</span> очков.</p>
-    <button id="confirmBtn">Подтвердить выбор</button>
+  <!-- Q modal -->
+  <div id="qModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <h3 class="modal-title" id="qTitle">Твои баллы</h3>
+      <div id="qScore" class="modal-text bigScore"></div>
+      <div id="qText" class="modal-text"></div>
+      <button id="qClose" class="btn">Окей</button>
+    </div>
   </div>
 
-  <!-- Video container for super-game -->
-  <div id="videoContainer" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background: #000; z-index: 2000; justify-content: center; align-items: center;">
-    <video id="superVideo" src="dreamina.mp4" style="width:100%; height:100%; object-fit: cover;" ></video>
-    <button id="skipVideoBtn" style="position: absolute; top: 10px; right: 10px; padding: 8px 12px; border: none; border-radius: 4px; background: #444; color: #fff; font-size: 1em; cursor: pointer;">Пропустить видео</button>
+  <!-- Fullscreen video -->
+  <div id="videoModal" class="vmodal" aria-hidden="true">
+    <div class="vwrap">
+      <button id="videoClose" class="btn vclose">Закрыть ✖</button>
+      <video id="finalVideo" src="dreamina.mp4" controls></video>
+    </div>
+  </div>
+
+  <!-- Gifts -->
+  <div id="finalModal" class="final" aria-hidden="true">
+    <div class="final-card">
+      <h3 class="final-title">🏆 Выбор подарков</h3>
+      <p id="finalIntro" class="sub"></p>
+      <div class="pill">Бюджет: <b id="budget"></b> очков • Выбрано: <b id="spent">0</b></div>
+
+      <div id="giftList" class="gift-grid"></div>
+
+      <div class="final-bar">
+        <div id="finalWarn" class="warn"></div>
+        <div style="display:flex; gap:8px">
+          <button id="clearGifts" class="btn btn-ghost">Сбросить выбор</button>
+          <button id="confirmGifts" class="btn">Подтвердить выбор</button>
+          <button id="closeFinal" class="btn btn-ghost">Закрыть</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
-    // *** Initializing global variables and game data ***
-    let puzzles = [
-      { question: "Без него не обходится ни один День Рождения.", answer: "ТОРТ" },
-      { question: "Праздник в честь круглой даты.", answer: "ЮБИЛЕЙ" },
-      { question: "Ласковое прозвище очень подвижного человека.", answer: "ШУСТРИК" }
-    ];
-    let currentPuzzleIndex = 0;
-    let score = 0;
-    let usedLetters = new Set();
-    let awaitingLetter = false;
-    let isSpinning = false;
-    let isSuperSpin = false;
-    let lastIndex = 0; // last wheel sector index at pointer
-    const sectorsCount = 12;
-    const anglePerSector = 360 / sectorsCount;
-    // Wheel sector values (points or special sectors)
-    const wheelValues = [100, 200, 300, 0, 500, 1000, 400, 900, 0, 600, 150, 800];
+    // ===== Intro (audio + typewriter)
+    const introTextFixed = `Здравствуй, Евгений. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан. Правила очень просты. Получай удовольствие и выигрывай призы`;
+    const introAudio = new Audio('intro.mp3');
+    const intro = document.getElementById('intro');
+    const introPlay = document.getElementById('introPlay');
+    const introClose = document.getElementById('introClose');
+    const introTextEl = document.getElementById('introText');
 
-    // Audio elements
-    const introAudio = new Audio("intro.mp3");
-    const bgAudio = new Audio("song.mp3");
-    bgAudio.loop = true;
-    const wrongSound = new Audio("pole_letter_wrong.mp3");
-    const solveSound = new Audio("zrejdbxx.mp3");
-
-    // DOM element references
-    const introModal = document.getElementById("introModal");
-    const introTextElem = document.getElementById("introText");
-    const playIntroBtn = document.getElementById("playIntroBtn");
-    const skipIntroBtn = document.getElementById("skipIntroBtn");
-    const superModal = document.getElementById("superModal");
-    const superInput = document.getElementById("superInput");
-    const superSubmitBtn = document.getElementById("superSubmitBtn");
-    const superErrorElem = document.getElementById("superError");
-    const finalModal = document.getElementById("finalModal");
-    const finalMessageContent = document.getElementById("finalMessageContent");
-    const finalCloseBtn = document.getElementById("finalCloseBtn");
-    const questionTextElem = document.getElementById("questionText");
-    const puzzleWordElem = document.getElementById("puzzleWord");
-    const scoreElem = document.getElementById("score");
-    const spinBtn = document.getElementById("spinBtn");
-    const guessInput = document.getElementById("guessInput");
-    const guessBtn = document.getElementById("guessBtn");
-    const prizeSection = document.getElementById("prizeSection");
-    const budgetTotalElem = document.getElementById("budgetTotal");
-    const selectedSumElem = document.getElementById("selectedSum");
-    const remainingSumElem = document.getElementById("remainingSum");
-    const confirmBtn = document.getElementById("confirmBtn");
-    const prizeChecks = document.querySelectorAll(".prizeCheck");
-    const videoContainer = document.getElementById("videoContainer");
-    const superVideo = document.getElementById("superVideo");
-    const skipVideoBtn = document.getElementById("skipVideoBtn");
-    const wheel = document.getElementById("wheel");
-
-    // Typewriter effect for intro text
-    let typingInterval;
-    function typeIntroText(text) {
-      introTextElem.textContent = "";
-      let index = 0;
-      typingInterval = setInterval(() => {
-        if (index < text.length) {
-          introTextElem.textContent += text.charAt(index);
-          index++;
-        } else {
-          clearInterval(typingInterval);
-        }
-      }, 50);
+    function typewrite(text, el, speed=96){
+      return new Promise(res=>{
+        el.textContent=''; let i=0;
+        const t=setInterval(()=>{ el.textContent += text[i++]||''; if(i>=text.length){ clearInterval(t); res(); } }, speed);
+      });
     }
-
-    // *** Intro modal event handlers ***
-    playIntroBtn.addEventListener("click", () => {
-      // Start intro audio and typing effect
-      playIntroBtn.disabled = true;
-      introAudio.play();
-      typeIntroText("Здравствуй, Евгений. Сегодня у тебя день рождения, а значит, время сыграть в игру — крути барабан! Правила очень просты: называй буквы, отгадывай слова, набирай очки... М-м-м, получай удовольствие и выигрывай призы!");
+    introPlay.addEventListener('click', async ()=>{
+      introPlay.disabled = true;
+      try{ await introAudio.play(); }catch(e){}
+      await typewrite(introTextFixed, introTextEl);
     });
-    skipIntroBtn.addEventListener("click", () => {
-      // Stop intro audio and typing, proceed to game
-      introAudio.pause();
-      introAudio.currentTime = 0;
-      clearInterval(typingInterval);
-      introModal.style.display = "none";
-      startGame();
-    });
-    // When intro audio ends, enable closing (could auto-close, but we'll let user click Закрыть)
-    introAudio.addEventListener("ended", () => {
-      playIntroBtn.disabled = false;
-    });
+    introClose.addEventListener('click', ()=>{ intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){} });
 
-    // *** Main game functions ***
-    function startGame() {
-      // Start background music
-      bgAudio.play();
-      // Load first puzzle
-      currentPuzzleIndex = 0;
-      score = 0;
-      scoreElem.textContent = score;
-      loadPuzzle(currentPuzzleIndex);
-    }
+    // ===== Sounds
+    const spinSong = new Audio('song.mp3'); spinSong.loop = true; spinSong.preload = 'auto'; spinSong.volume = 0.3;
+    const wrongSfx = new Audio('pole_letter_wrong.mp3');
+    const winSfx1  = new Audio('zrejdbxx.mp3');
+    const winSfx2  = new Audio('pole_word_1996.mp3');
 
-    function loadPuzzle(index) {
-      usedLetters.clear();
-      awaitingLetter = false;
-      // Enable input and spin for new puzzle
-      guessInput.disabled = false;
-      guessBtn.disabled = false;
-      spinBtn.disabled = false;
-      // Display question and reset puzzle word display
-      questionTextElem.textContent = puzzles[index].question;
-      // Prepare masked word (underscores for each letter, preserve spaces)
-      const answer = puzzles[index].answer.toUpperCase();
-      let masked = "";
-      for (let ch of answer) {
-        if (ch === " ") {
-          // Use double space for word gap
-          masked += "  ";
-        } else {
-          masked += "_";
-        }
+    // ===== Wheel
+    const points = [100,200,300,400,500,600,700,800,900,1000];
+    const wheel  = document.getElementById('wheel');
+    const ctx    = wheel.getContext('2d');
+    let angle=0, spinning=false;
+
+    function drawWheel(a=0){
+      const W = wheel.width  = wheel.clientWidth  * devicePixelRatio;
+      const H = wheel.height = wheel.clientHeight * devicePixelRatio;
+      const cx=W/2, cy=H/2; const R=Math.min(W,H)/2 - 12*devicePixelRatio;
+      const n = points.length; const arc = 2*Math.PI/n;
+      ctx.clearRect(0,0,W,H); ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
+
+      for(let i=0;i<n;i++){
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,i*arc,(i+1)*arc);
+        ctx.fillStyle = (i%2? '#103079':'#142d63'); ctx.fill();
+        ctx.strokeStyle = '#0a1e4f'; ctx.lineWidth = 3*devicePixelRatio; ctx.stroke();
+        ctx.save(); ctx.rotate(i*arc + arc/2); ctx.fillStyle = '#ffdc73';
+        ctx.font = `${Math.max(18*devicePixelRatio,R*0.085)}px system-ui`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.translate(R*0.75,0); ctx.rotate(Math.PI/2);
+        ctx.fillText(points[i].toString(),0,0);
+        ctx.restore();
       }
-      puzzleWordElem.textContent = masked;
-      puzzleWordElem.classList.remove("solved");
-      // Focus spin button or input? We'll not focus here.
+      const bulbs = 72;
+      for(let i=0;i<bulbs;i++){
+        const ang = a + (i/bulbs)*Math.PI*2;
+        const bx = Math.cos(ang)*(R+10*devicePixelRatio);
+        const by = Math.sin(ang)*(R+10*devicePixelRatio);
+        ctx.beginPath(); ctx.arc(bx,by,4*devicePixelRatio,0,Math.PI*2);
+        const on = (Math.floor(Date.now()/120)%2===i%2);
+        ctx.fillStyle = on? 'rgba(255,240,150,.95)':'rgba(255,210,77,.85)';
+        ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.stroke();
+      }
+      ctx.restore();
+    }
+    window.addEventListener('resize', ()=> drawWheel(angle));
+    drawWheel(angle);
+
+    function spin(){
+      if(spinning) return;
+      spinning = true;
+
+      try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
+
+      const DURATION = 10000;     // фиксированно ~10с каждый раз
+      const TURNS    = 7;         // фиксированное число оборотов
+      const startAngle = angle;
+      const n = points.length; const arc = 2*Math.PI/n;
+
+      const targetIndex = Math.floor(Math.random()*n);
+      const sectorCenter = (targetIndex + 0.5) * arc;
+      const targetAngle  = -Math.PI/2 - sectorCenter;
+      const endAngle     = targetAngle + TURNS*2*Math.PI;
+
+      const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+      const t0 = performance.now();
+
+      function step(ts){
+        const t = Math.min(1, (ts - t0) / DURATION);
+        const eased = easeOutCubic(t);
+        angle = startAngle + (endAngle - startAngle) * eased;
+        drawWheel(angle);
+        if(t < 1) requestAnimationFrame(step); else { spinning=false; finalize(targetIndex); }
+      }
+      requestAnimationFrame(step);
+    }
+    document.getElementById('spin').addEventListener('click', spin);
+
+    function finalize(idx){
+      try{ spinSong.volume = 0.3; if (spinSong.paused) spinSong.play(); }catch(e){}
+      const p = points[idx];
+      log(`🎯 Выпало: <b>${p}</b> очков`);
+      document.getElementById('rule').innerHTML = `Твои очки за барабан: <span class="points">${p}</span>. Ответь на вопрос!`;
+
+      const r = rounds[round];
+      setTimeout(()=>{
+        document.getElementById('qTitle').textContent = 'Твои баллы';
+        document.getElementById('qScore').textContent = `${p}`;
+        document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
+        qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
+      }, 1200);
+
+      showQuestion();
     }
 
-    // Check puzzle solved status
-    function isPuzzleSolved() {
-      return !puzzleWordElem.textContent.includes("_");
+    function log(html){
+      const box=document.getElementById('log');
+      const d=document.createElement('div');
+      d.innerHTML = `<span class="note">${new Date().toLocaleTimeString()}</span> ${html}`;
+      box.prepend(d);
     }
 
-    // *** Wheel spinning function ***
-    function spinWheel() {
-      // Compute a random new sector index to land on
-      const newIndex = Math.floor(Math.random() * sectorsCount);
-      // Prepare wheel for spin: set current rotation to lastIndex position
-      const currentAngle = lastIndex * anglePerSector;
-      wheel.style.transition = "none";
-      wheel.style.transform = `rotate(${currentAngle}deg)`;
-      // Force reflow
-      wheel.offsetWidth; 
-      // Calculate target rotation
-      let diffIndex = (newIndex - lastIndex + sectorsCount) % sectorsCount;
-      const targetAngle = currentAngle + 360 * 7 + diffIndex * anglePerSector;
-      // Animate rotation
-      wheel.style.transition = "transform 10s linear";
-      wheel.style.transform = `rotate(${targetAngle}deg)`;
-      // Update lastIndex to newIndex for next spin reference
-      lastIndex = newIndex;
-      return newIndex;
-    }
+    // ===== Questions
+    const rounds = [
+      { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
+      { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
+      { q: 'Как звали отца отца отца?', a: 'СЕМЁН' },
+      { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' },
+      { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК'] }
+    ];
+    let round = 0; let score = 0;
 
-    // *** Event handlers for main game ***
-    spinBtn.addEventListener("click", () => {
-      if (isSpinning) return;
-      if (awaitingLetter) {
-        alert("Сначала назовите букву или слово!");
+    function normalizeRu(s){ return s.trim().toUpperCase().replace(/Ё/g,'Е'); }
+    function getAcceptList(a){ return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)]; }
+
+    function showQuestion(){
+      const r = rounds[round];
+      if(!r){
+        // все вопросы пройдены — короткая пауза и финальное видео, потом подарки
+        endGameWithVideo();
         return;
       }
-      // Start wheel spinning
-      isSpinning = true;
-      spinBtn.disabled = true;
-      guessInput.disabled = true;
-      guessBtn.disabled = true;
-      const spinResultIndex = spinWheel();
-      // After spin animation, handle enabling guess or super game
-    });
-
-    // Listen for wheel spin animation end
-    wheel.addEventListener("transitionend", () => {
-      isSpinning = false;
-      if (isSuperSpin) {
-        // Super-game spin ended, show super question modal
-        superModal.style.display = "flex";
-        // Pause background music for video soon
-        bgAudio.pause();
-        // Reset flag
-        isSuperSpin = false;
-      } else {
-        // Normal spin ended, enable guessing a letter or solving
-        awaitingLetter = true;
-        guessInput.disabled = false;
-        guessBtn.disabled = false;
-        guessInput.focus();
-      }
-    });
-
-    // Guess (letter or word) submission
-    function handleGuessSubmission() {
-      const guess = guessInput.value.trim().toUpperCase();
-      if (!guess) return;
-      // Determine if letter or word guess
-      if (guess.length === 1) {
-        // Letter guess
-        if (!awaitingLetter) {
-          alert("Сперва прокрутите барабан!");
-          return;
-        }
-        const letter = guess;
-        guessInput.value = "";
-        if (usedLetters.has(letter)) {
-          // Letter was already tried
-          alert("Эту букву уже называли.");
-          return;
-        }
-        usedLetters.add(letter);
-        let found = false;
-        const answer = puzzles[currentPuzzleIndex].answer.toUpperCase();
-        // Reveal the letter if present
-        let newMasked = "";
-        for (let i = 0; i < answer.length; i++) {
-          const ansChar = answer.charAt(i);
-          const maskChar = puzzleWordElem.textContent.charAt(newMasked.length); // current displayed char (taking into account double spaces)
-          if (ansChar === " ") {
-            // If answer has space, our displayed mask uses double space, just copy it
-            newMasked += "  ";
-            // Skip the extra space in display text
-            i--; // decrement i to counter increment, because answer length counts one space while display had two
-            // Actually better to handle via approach of storing mask differently, but let's assume one space. (Simplified handling)
-          } else if (ansChar === letter) {
-            newMasked += letter;
-            found = true;
-          } else {
-            // if maskChar is already revealed letter (not underscore), keep it
-            if (maskChar !== "_") {
-              newMasked += maskChar;
-            } else {
-              newMasked += "_";
-            }
-          }
-        }
-        // Update puzzle display
-        puzzleWordElem.textContent = newMasked;
-        if (found) {
-          // Correct letter
-          // Add score: spin result value * count of this letter
-          const count = (answer.split(letter).length - 1);
-          const spinValue = wheelValues[lastIndex];
-          score += spinValue * count;
-          scoreElem.textContent = score;
-          // Check if puzzle solved
-          if (isPuzzleSolved()) {
-            // Puzzle solved by revealing the last letter
-            puzzleWordElem.classList.add("solved");
-            solveSound.play();
-            guessInput.disabled = true;
-            guessBtn.disabled = true;
-            // Move to next puzzle or super game after a short delay
-            setTimeout(() => {
-              if (currentPuzzleIndex === puzzles.length - 1) {
-                // Last puzzle solved -> proceed to super game
-                startSuperGame();
-              } else {
-                currentPuzzleIndex++;
-                loadPuzzle(currentPuzzleIndex);
-              }
-            }, 2000);
-          } else {
-            // Puzzle not solved yet, allow next spin or the player can also guess the word
-            // We keep guess input enabled (they might solve now).
-            // Enable spin for next letter
-            awaitingLetter = false;
-            spinBtn.disabled = false;
-          }
-        } else {
-          // Wrong letter
-          wrongSound.play();
-          // Flash red for wrong guess
-          guessInput.classList.add("wrong");
-          setTimeout(() => {
-            guessInput.classList.remove("wrong");
-          }, 500);
-          // No letters revealed, end of turn (single player: just spin again)
-          awaitingLetter = false;
-          spinBtn.disabled = false;
-        }
-      } else {
-        // Word guess
-        const guessWord = guess;
-        guessInput.value = "";
-        if (guessWord === puzzles[currentPuzzleIndex].answer.toUpperCase()) {
-          // Correct word guess
-          // Reveal the entire word
-          puzzleWordElem.textContent = puzzles[currentPuzzleIndex].answer.toUpperCase().split("").map(ch => ch === " " ? " " : ch).join("");
-          puzzleWordElem.classList.add("solved");
-          solveSound.play();
-          guessInput.disabled = true;
-          guessBtn.disabled = true;
-          // Update score (no additional points for solving, just keep current score)
-          // Proceed to next stage
-          setTimeout(() => {
-            if (currentPuzzleIndex === puzzles.length - 1) {
-              // Solved last puzzle -> super game
-              startSuperGame();
-            } else {
-              currentPuzzleIndex++;
-              loadPuzzle(currentPuzzleIndex);
-            }
-          }, 2000);
-        } else {
-          // Wrong word guess
-          wrongSound.play();
-          // Highlight input red briefly
-          guessInput.classList.add("wrong");
-          setTimeout(() => {
-            guessInput.classList.remove("wrong");
-          }, 500);
-          // Show hint (already displayed at bottom)
-          // If a spin was awaiting a letter, we consider this wrong solve attempt as using that turn
-          if (awaitingLetter) {
-            awaitingLetter = false;
-            spinBtn.disabled = false;
-          }
-          // If no spin was active (they guessed without spinning), they can continue guessing or spin; no change needed.
-        }
-      }
+      document.getElementById('question').textContent = `Вопрос: ${r.q}`;
+      const firstAns = Array.isArray(r.a) ? r.a[0] : r.a;
+      document.getElementById('length').textContent  = `Слово из ${normalizeRu(firstAns).length} букв`;
+      const input = document.getElementById('answer'); input.value=''; input.focus();
+      document.getElementById('answerBox').classList.remove('correct','wrong');
     }
 
-    guessBtn.addEventListener("click", handleGuessSubmission);
-    // Allow pressing Enter to submit guess
-    guessInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleGuessSubmission();
-      }
-    });
+    function checkAnswer(){
+      const r = rounds[round]; if(!r) return;
+      const got  = normalizeRu(document.getElementById('answer').value);
+      const list = getAcceptList(r.a);
+      const box  = document.getElementById('answerBox');
 
-    // *** Super game initiation after last puzzle ***
-    function startSuperGame() {
-      // Allow one more spin before super question
-      questionTextElem.innerHTML = "<strong>Супер-игра!</strong> Крутите барабан ещё раз.";
-      puzzleWordElem.textContent = "";
-      // Disable guess input during this spin
-      guessInput.disabled = true;
-      guessBtn.disabled = true;
-      // Mark next spin as super spin
-      isSuperSpin = true;
-      // Enable spin button for the final spin
-      spinBtn.disabled = false;
-    }
+      if(list.includes(got)){
+        box.classList.remove('wrong'); box.classList.add('correct');
+        const p = parseInt(document.getElementById('qScore').textContent || '0', 10);
+        if(!isNaN(p)){ score += p; document.getElementById('score').textContent = score; }
+        log('✅ Совершенно верно!');
+        launchConfetti();
+        try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
 
-    // *** Super game answer submission ***
-    superSubmitBtn.addEventListener("click", () => {
-      const answer = superInput.value.trim().toUpperCase();
-      if (!answer) return;
-      if (answer === "БУЛЬБА") {
-        // Correct super answer
-        superErrorElem.style.display = "none";
-        superModal.style.display = "none";
-        // Double the points if no previous mistake
-        if (!superMistakeMade) {
-          score = score * 2;
-          scoreElem.textContent = score;
-        }
-        // Play the celebratory video
-        videoContainer.style.display = "flex";
-        superVideo.play();
-      } else {
-        // Wrong super answer
-        wrongSound.play();
-        superMistakeMade = true;
-        superErrorElem.textContent = "Эхх, вы совершили ошибку. Удвоение очков отменяется. Попробуйте снова.";
-        superErrorElem.style.display = "block";
-        superInput.value = "";
-        superInput.focus();
-      }
-    });
-    // Track if a mistake was made in super game
-    let superMistakeMade = false;
-    // Also allow Enter key for super answer
-    superInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        superSubmitBtn.click();
-      }
-    });
-
-    // *** Super game video events ***
-    superVideo.addEventListener("ended", () => {
-      // Video finished, proceed to prize selection
-      videoContainer.style.display = "none";
-      openPrizeSelection();
-    });
-    skipVideoBtn.addEventListener("click", () => {
-      // Skip video, stop and proceed
-      superVideo.pause();
-      videoContainer.style.display = "none";
-      openPrizeSelection();
-    });
-
-    // *** Prize selection logic ***
-    function openPrizeSelection() {
-      // Set budget and display prize section
-      budgetTotalElem.textContent = score;
-      selectedSumElem.textContent = 0;
-      remainingSumElem.textContent = score;
-      prizeSection.style.display = "block";
-    }
-
-    // Handle selecting prizes
-    prizeChecks.forEach(cb => {
-      cb.addEventListener("change", (e) => {
-        let total = 0;
-        prizeChecks.forEach(item => {
-          if (item.checked) {
-            total += Number(item.dataset.cost);
+        round++;
+        setTimeout(()=>{
+          document.getElementById('rule').textContent = 'Снова крути барабан!';
+          document.getElementById('question').textContent = 'Вопрос появится после барабана.';
+          document.getElementById('length').textContent = '';
+          if(round >= rounds.length){
+            // дальше — финальное видео => подарки
+            // ничего не делаем тут — showQuestion вызовется из finalize следующего спина не будет, т.к. спинов больше нет
           }
+        }, 500);
+      } else {
+        box.classList.remove('correct'); box.classList.add('wrong');
+        log('❌ Неверно, попробуй ещё раз.');
+        try{ wrongSfx.currentTime=0; wrongSfx.play(); }catch(e){}
+      }
+    }
+    document.getElementById('submit').addEventListener('click', checkAnswer);
+    document.getElementById('answer').addEventListener('keydown', e=>{ if(e.key==='Enter') checkAnswer(); });
+
+    // Q modal controls
+    const qModal = document.getElementById('qModal');
+    document.getElementById('qClose').addEventListener('click',()=>{
+      qModal.classList.remove('show');
+      qModal.setAttribute('aria-hidden','true');
+      document.getElementById('answer').focus();
+    });
+
+    document.getElementById('reset').addEventListener('click', ()=>{
+      try{ spinSong.pause(); }catch(e){}
+      spinSong.currentTime=0; spinSong.volume=0.3;
+      score=0; round=0; angle=0;
+      document.getElementById('score').textContent='0';
+      document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.';
+      document.getElementById('question').textContent='Вопрос появится после барабана.';
+      document.getElementById('length').textContent='';
+      qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
+      document.getElementById('finalModal').classList.remove('show'); document.getElementById('finalModal').setAttribute('aria-hidden','true');
+      document.getElementById('videoModal').classList.remove('show'); document.getElementById('videoModal').setAttribute('aria-hidden','true');
+      drawWheel(0); document.getElementById('log').innerHTML='';
+    });
+
+    // ===== Confetti
+    function launchConfetti(){
+      const c=document.createElement('canvas'); c.className='confetti'; document.body.appendChild(c);
+      const cx=c.getContext('2d'); const DPR=window.devicePixelRatio||1;
+      let W=innerWidth, H=innerHeight; c.width=W*DPR; c.height=H*DPR; cx.scale(DPR,DPR);
+      const parts=[...Array(140)].map(()=>({
+        x:Math.random()*W, y:-20-Math.random()*H*0.3,
+        vx:-2+Math.random()*4, vy:2+Math.random()*4,
+        rot:Math.random()*Math.PI, vr:-0.2+Math.random()*0.4,
+        life:120+Math.random()*80, size:5+Math.random()*5,
+        hue:Math.random()*360
+      }));
+      function draw(){
+        cx.clearRect(0,0,W,H);
+        parts.forEach(p=>{
+          p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life--;
+          cx.save(); cx.translate(p.x,p.y); cx.rotate(p.rot);
+          cx.fillStyle=`hsl(${p.hue},85%,60%)`;
+          cx.fillRect(-p.size/2,-p.size/2,p.size,p.size);
+          cx.restore();
         });
-        if (total > score) {
-          // Over budget, undo selection
-          e.target.checked = false;
-          total -= Number(e.target.dataset.cost);
-          alert("Недостаточно очков для этого подарка!");
-        }
-        // Update sums
-        selectedSumElem.textContent = total;
-        remainingSumElem.textContent = score - total;
-      });
-    });
-
-    confirmBtn.addEventListener("click", () => {
-      // Gather selected prizes
-      let selectedItems = [];
-      prizeChecks.forEach(item => {
-        if (item.checked) {
-          const itemName = item.parentElement.parentElement.querySelector("td:first-child").textContent;
-          selectedItems.push(itemName);
-        }
-      });
-      // Prepare final message
-      let finalMsg = "<h2>Поздравляем, Евгений!</h2>";
-      finalMsg += "<p>Вы набрали " + score + " очков";
-      if (selectedItems.length > 0) {
-        finalMsg += " и выбрали призы: " + selectedItems.join(", ") + ".";
-      } else {
-        finalMsg += ", но не выбрали ни одного подарка.";
+        if(parts.some(p=>p.life>0)) requestAnimationFrame(draw); else c.remove();
       }
-      finalMsg += "</p><p>С Днём Рождения!</p>";
-      finalMessageContent.innerHTML = finalMsg;
-      // Show final modal
-      prizeSection.style.display = "none";
-      finalModal.style.display = "flex";
+      draw();
+    }
+
+    // ===== Final video then gifts
+    const videoModal = document.getElementById('videoModal');
+    const finalVideo = document.getElementById('finalVideo');
+    const videoClose = document.getElementById('videoClose');
+
+    function endGameWithVideo(){
+      // маленькая пауза перед показом видео
+      setTimeout(()=>{
+        try{ spinSong.pause(); }catch(e){}
+        videoModal.classList.add('show'); videoModal.setAttribute('aria-hidden','false');
+        try{ finalVideo.currentTime = 0; finalVideo.play(); }catch(e){}
+      }, 2000); // пауза перед видео
+    }
+
+    function closeVideoAndOpenGifts(){
+      try{ finalVideo.pause(); }catch(e){}
+      videoModal.classList.remove('show'); videoModal.setAttribute('aria-hidden','true');
+      openGifts(score);
+    }
+
+    videoClose.addEventListener('click', closeVideoAndOpenGifts);
+    finalVideo.addEventListener('ended', ()=> {
+      // по окончании видео просто показываем кнопку "Закрыть" (она уже есть),
+      // пользователь сам решит — закрыть сейчас или пересмотреть.
     });
 
-    finalCloseBtn.addEventListener("click", () => {
-      // Close final message and reload game (restart)
-      finalModal.style.display = "none";
-      location.reload();
-    });
+    // ===== Gifts
+    const giftsSource = [
+      // (4/4)
+      {name:'Горный велосипед', tier:'4/4', desc:'Согласовывается индивидуально'},
+      {name:'Прыжок с парашютом в любой точке мира', tier:'4/4', desc:'Даётся неограниченный по времени купон для прыжка в любом месте'},
+      {name:'Вайбовая колонка Marshall', tier:'4/4', link:'https://catalog.onliner.by/wspeaker/marshall/acton2bl1'},
+      {name:'E-book Amazon последняя версия', tier:'4/4', link:'https://kindle.by/devices/amazon-kindle-paperwhite-6-12-generation-16gb-black'},
+
+      // (2/4)
+      {name:'Алисина колонка (AI edition)', tier:'2/4', link:'https://catalog.onliner.by/wspeaker/yandex/yanstmidiblk'},
+      {name:'Премиум наушники Realme (последняя модель)', tier:'2/4', link:'https://market.yandex.ru/card/naushniki-besprovodnyye-realme-buds-air7air7-pro-bluetooth-c-shumopodavleniyem/4598149761?do-waremd5=HbJaYobNJ7zDtdV7Toe1cA&sponsored=1&cpc=eGiwCaltmhbiDEhIogGOZIfhhnejIxuiwGDOjvCmOD96swKkTPv0JNMt3Y_3XeEVhoZRhyBb3lFaFeXVs_b8J_B4S0xOmRIFQX1_kkYxqPec5dOivpIKH5Qp_dx6W5cBBsJ5G9S-cDrZVhQUWYHoU6OhXmMS7JoBeoYBaDp3Hk2l8HVmkfL3JBIH_Pc6cO5mIehnQ0WUdoxTNrLF-i7dTS_ikl1mc8F6gSYWH8CSbt-MkMD9ubOh2ZwFHs2QpJHZ3jJAfqiAPSdUYEOh8jH3q2iIMelPWNb1Izzui_XkyfoKxMvHSlnWlBhA9SjDfvIakGT3Wf5--GfZPHH4T-pIpvKlpF_6gXTNVzE3J91RCm_DukkBxCeGO9vwd1OgfrrKt87R4YnH7fv4sjyX1gxgDg3av3PX7f_BxLUhHUybypnmElNdaNAsCZCLTiNDgFOjTFV6anh9J2EK9L5IxKs0dAm3A5Y28PLVFah5U3zC6OrzdmHhN_jbYXCEOLXJTLBxHkx3RyFlVcG0GlJt7LmNVfNB9Wq5R0xNX2SVu5vVI1lWJ0Cm79U6qU79eewAgvXaHGfWhXvfCqgVp_WbklR2Ew%2C%2C&ogV=-4'},
+      {name:'Скидка 30% на авиабилет в любую страну', tier:'2/4', desc:'Скидка предоставляется по запросу и приходит в виде USDT'},
+      {name:'Отдых в баньке «Избушка»', tier:'2/4', link:'https://www.saunaminska.by/izbushka.htm'},
+      {name:'Поездка в национальный парк Нарочаны на выходные', tier:'2/4', desc:'Не, ну можем и такое организовать :))'},
+      {name:'Очки с камерой 4K Indigo Polarized', tier:'2/4', link:'https://catalog.onliner.by/actioncamera/xtry/xtg113fhdindigop'},
+
+      // (1/4)
+      {name:'Аэрогриль Брайер «Йооу эдишн BR2039»', tier:'1/4', link:'https://brayer.ru/catalog/aerogrili/aerogril-brayer-br2039/'},
+      {name:'Электрическая зубная щётка Oclean', tier:'1/4', link:'https://catalog.onliner.by/toothbrush/oclean/oclexproelitegre'},
+      {name:'Кольцо для отслеживания сна Mijia', tier:'1/4', link:'https://market.yandex.ru/card/xiaomi-smart-ring-bluetooth-black-size-11/4589470934?do-waremd5=kQiB0GAlTYetiYIEuMTFzg&cpc=btYqqIlf1j_d006RY_IKbrxejstrKi14H-JgxeCaABVEF91Fgc40usZYfWyRTrF1zPedQGfOsBBGV43jY9Iw0qGtR31vhk9iYnCuu51y3BQSCAEILqQw3mP09xEV3CylBV1vaLCToRDCyBnwNhewdniY9JxMsdNAffqda-1C3hiRULh5EZOwd9H924jOBjLkV4bpKORVAunl8TWpVmh_UUKs0S_Y62aHCO78I6u53t7UPOI-zCCBj8aDk523MuWEMwu1O1iejiwdTVpcOLIJ7Vdw9upueL2tD_rjcm0clDSFPp4fzYDNg9DKCbN89rMla0GeCztd83oXmxGkidxCcaARwt-7r63WL2Ra5alJkv-WgEzYQAIOz9fGeifF7Q-Rk2ylM6yYuhBRHBlYfS9oGWmGfldT7xVszxKBZQUg8jonLhv0uinaUDuBnpLrfzcoD1SLxqh6lu8__72lQUmK3U7eOI-Lbnp2J-NFVBAUrAlrrYNPDjAtJ0NE4f-vwoMHeI-WHiV2MA3fMeOjo6MwCnu8qiFk1EdY4JUOcyE4zRWEpt4Yj97NQgQeogMHUkXw&ogV=-4'}
+    ];
+
+    const finalModal = document.getElementById('finalModal');
+    const giftListEl = document.getElementById('giftList');
+    const spentEl = document.getElementById('spent');
+    const budgetEl = document.getElementById('budget');
+    const finalWarn = document.getElementById('finalWarn');
+    const finalIntro = document.getElementById('finalIntro');
+    const btnConfirm = document.getElementById('confirmGifts');
+    const btnClear = document.getElementById('clearGifts');
+    const btnClose = document.getElementById('closeFinal');
+
+    let budget=0, selection={}, pricedGifts=[];
+
+    function roundTo100(x){ return Math.max(100, Math.round(x/100)*100); }
+    function randRange(min,max){ return Math.random()*(max-min)+min; }
+
+    function priceByTier(tier, total){
+      if(tier==='4/4') return roundTo100(randRange(total*0.90, total*1.00));
+      if(tier==='2/4') return roundTo100(randRange(total*0.40, total*0.48));
+      // 1/4
+      return roundTo100(randRange(total*0.20, total*0.25));
+    }
+
+    function openGifts(finalScore){
+      budget = finalScore;
+      budgetEl.textContent = budget.toString();
+      spentEl.textContent = '0';
+      finalWarn.textContent = '';
+      finalIntro.textContent = `Евгений, твой итоговый счёт — ${finalScore} очков. Выбирай призы на эту сумму:`;
+
+      // цены
+      pricedGifts = giftsSource.map(g=>{
+        const price = priceByTier(g.tier, budget);
+        return {...g, price};
+      });
+
+      // рендер
+      giftListEl.innerHTML = '';
+      selection = {};
+      pricedGifts.forEach((g,idx)=>{
+        const row = document.createElement('div');
+        row.className = 'gift-row';
+
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type='checkbox'; cb.dataset.idx = idx;
+        label.appendChild(cb);
+
+        const text = document.createElement('div');
+        const name = document.createElement('div');
+        const more = g.link
+          ? ` — <a href="${g.link}" target="_blank" rel="noopener">узнать подробнее</a>`
+          : (g.desc ? ` — <span class="sub">${g.desc}</span>` : '');
+        name.innerHTML = `${g.name} — <b>${g.price}</b> очков${more}`;
+        text.appendChild(name);
+
+        row.appendChild(label);
+        row.appendChild(text);
+        giftListEl.appendChild(row);
+
+        cb.addEventListener('change', onSelectChange);
+      });
+
+      btnConfirm.onclick = confirmGifts;
+      btnClear.onclick = clearSelection;
+      btnClose.onclick = ()=>closeGifts();
+
+      finalModal.classList.add('show'); finalModal.setAttribute('aria-hidden','false');
+    }
+
+    function closeGifts(){
+      finalModal.classList.remove('show');
+      finalModal.setAttribute('aria-hidden','true');
+    }
+
+    function onSelectChange(e){
+      const idx = parseInt(e.target.dataset.idx,10);
+      selection[idx] = e.target.checked;
+      recompute();
+    }
+
+    function recompute(){
+      let spent = 0;
+      Object.entries(selection).forEach(([k,v])=>{
+        if(!v) return;
+        const g = pricedGifts[parseInt(k,10)];
+        spent += g.price;
+      });
+
+      spentEl.textContent = spent.toString();
+      let warn = '';
+      if(spent > budget) warn += 'Перебор бюджета. ';
+      finalWarn.textContent = warn.trim();
+      btnConfirm.disabled = warn.length>0 || spent===0;
+    }
+
+    function clearSelection(){
+      selection = {};
+      document.querySelectorAll('#giftList input[type="checkbox"]').forEach(cb=> cb.checked=false);
+      recompute();
+    }
+
+    function confirmGifts(){
+      const chosen = Object.entries(selection)
+        .filter(([,v])=>v)
+        .map(([k])=> pricedGifts[parseInt(k,10)]);
+      const names = chosen.map(c=>`${c.name} — ${c.price} очков`).join('\n');
+      alert(`Выбрано:\n${names}\n\nПоздравляем!`);
+      closeGifts();
+    }
   </script>
 </body>
 </html>
-
 
 
 
