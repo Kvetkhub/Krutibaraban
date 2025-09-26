@@ -46,7 +46,6 @@
 
     .qbox{min-height:210px}
     .q{font-weight:800}
-    .q.super{font-size:28px; color:var(--gold); text-shadow:0 1px 0 #000}
     .word-len{opacity:.8; font-size:13px}
     .answer{display:flex; gap:8px; margin-top:10px}
     .answer input{flex:1; padding:12px 14px; border-radius:12px; border:2px solid transparent; background:#0f1538; color:var(--ink); font-weight:700; letter-spacing:.5px}
@@ -62,14 +61,14 @@
     .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
     .icta{display:flex; gap:10px; margin-top:12px}
 
-    /* Result modal */
+    /* Q modal */
     .modal{position:fixed; inset:0; background:rgba(5,10,25,.86); display:none; place-items:center; z-index:1500}
     .modal.show{display:grid}
     .modal-card{width:min(720px,92vw); border-radius:20px; padding:22px; color:var(--ink);
       background:linear-gradient(180deg,#12265c,#0d1b46);
       border:1px solid rgba(255,255,255,.12); box-shadow:0 28px 90px rgba(0,0,0,.55); text-align:center}
     .modal-title{margin:0 0 8px; color:var(--gold); font-weight:900}
-    .modal-title.super{font-size:32px; letter-spacing:2px}
+    .modal-title.super{font-size:28px; letter-spacing:1px}
     .modal-text{font-weight:800; margin:6px 0 14px}
     .bigScore{font-weight:900; font-size:clamp(42px, 9vw, 120px); line-height:1; color:var(--gold);
       text-shadow:0 2px 0 #000,0 10px 26px rgba(0,0,0,.35)}
@@ -77,7 +76,15 @@
     .points{font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(255,220,115,.9)}
     canvas.confetti{position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:2000}
 
-    /* Финал */
+    /* ===== Видео-модал (на весь экран) ===== */
+    .video-modal{position:fixed; inset:0; background:rgba(0,0,0,.95); display:none; place-items:center; z-index:2400}
+    .video-modal.show{display:grid}
+    .video-wrap{width:min(1280px, 96vw); height:min(720px, 80vh); position:relative; display:grid; place-items:center}
+    .video-wrap video{width:100%; height:100%; object-fit:contain; background:#000; border-radius:12px; box-shadow:0 28px 90px rgba(0,0,0,.6)}
+    .video-ctrls{position:absolute; right:10px; bottom:10px}
+    .video-ctrls .hide{display:none}
+
+    /* ===== Финальный экран подарков ===== */
     .final{position:fixed; inset:0; background:rgba(0,0,0,.86); display:none; place-items:center; z-index:2200}
     .final.show{display:grid}
     .final-card{width:min(980px,94vw); background:linear-gradient(180deg,#112552,#0d1c45); color:var(--ink);
@@ -91,14 +98,6 @@
     .final-bar{display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap}
     .pill{background:#0e1a44; border:1px solid rgba(255,255,255,.15); border-radius:999px; padding:8px 12px; font-weight:800}
     .warn{color:#ff7a7a}
-
-    /* Видео-модал (на весь экран) */
-    .video-modal{position:fixed; inset:0; background:rgba(0,0,0,.95); display:none; place-items:center; z-index:3000}
-    .video-modal.show{display:grid}
-    .video-wrap{width: min(1200px, 96vw); height: min(680px, 90vh); display:grid; place-items:center}
-    .video-wrap video{width:100%; height:100%; object-fit:contain; background:#000; border-radius:10px}
-    .video-ctrls{margin-top:10px; text-align:center}
-    .hide{display:none}
   </style>
 </head>
 <body>
@@ -170,7 +169,7 @@
   <!-- Видео-модал -->
   <div id="videoModal" class="video-modal" aria-hidden="true">
     <div class="video-wrap">
-      <video id="dreamVideo" src="dreamina.mp4" playsinline controls class=""></video>
+      <video id="dreamVideo" src="dreamina.mp4" playsinline controls></video>
       <div class="video-ctrls">
         <button id="closeVideo" class="btn btn-ghost hide">Закрыть</button>
       </div>
@@ -183,9 +182,7 @@
       <h3 class="final-title">🏆 Выбор подарков</h3>
       <p id="finalIntro" class="sub"></p>
       <div class="pill">Бюджет: <b id="budget"></b> очков • Выбрано: <b id="spent">0</b></div>
-
       <div id="giftList" class="gift-grid"></div>
-
       <div class="final-bar">
         <div id="finalWarn" class="warn"></div>
         <div style="display:flex; gap:8px">
@@ -215,25 +212,21 @@
     introPlay.addEventListener('click', async ()=>{
       introPlay.disabled = true;
       try{ await introAudio.play(); }catch(e){}
-      typewrite(introTextFixed, introTextEl);
+      await typewrite(introTextFixed, introTextEl);
     });
-    introClose.addEventListener('click', ()=>{
-      intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){}
-    });
+    introClose.addEventListener('click', ()=>{ intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){} });
 
     // ===== Звуки
     const spinSong = new Audio('song.mp3'); spinSong.loop = true; spinSong.preload = 'auto'; spinSong.volume = 0.3;
     const wrongSfx = new Audio('pole_letter_wrong.mp3');
     const winSfx1  = new Audio('zrejdbxx.mp3');
     const winSfx2  = new Audio('pole_word_1996.mp3');
-    const spinHint = new Audio('spin_hint.mp3'); spinHint.preload = 'auto'; spinHint.volume = 0.9;
 
     // ===== Барабан
     const points = [100,200,300,400,500,600,700,800,900,1000];
     const wheel  = document.getElementById('wheel');
     const ctx    = wheel.getContext('2d');
-    let angle=0, spinning=false;
-    let isSuper=false; // флаг супер-раунда
+    let angle=0, spinning=false, spinCount=0;
 
     function drawWheel(a=0){
       const W = wheel.width  = wheel.clientWidth  * devicePixelRatio;
@@ -246,6 +239,7 @@
         ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,i*arc,(i+1)*arc);
         ctx.fillStyle = (i%2? '#103079':'#142d63'); ctx.fill();
         ctx.strokeStyle = '#0a1e4f'; ctx.lineWidth = 3*devicePixelRatio; ctx.stroke();
+        // цифры
         ctx.save(); ctx.rotate(i*arc + arc/2); ctx.fillStyle = '#ffdc73';
         ctx.font = `${Math.max(18*devicePixelRatio,R*0.085)}px system-ui`;
         ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -253,6 +247,7 @@
         ctx.fillText(points[i].toString(),0,0);
         ctx.restore();
       }
+      // лампочки
       const bulbs = 72;
       for(let i=0;i<bulbs;i++){
         const ang = a + (i/bulbs)*Math.PI*2;
@@ -270,14 +265,13 @@
 
     function spin(){
       if(spinning) return;
-      spinning = true;
+      spinning = true; spinCount++;
 
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      // одинаково бодро каждый спин
-      const BASE_DUR = 10000;
-      const DURATION = Math.max(7000, BASE_DUR + Math.floor(Math.random()*1600 - 800)); // ~9.2-10.8s
-      const TURNS    = 5 + Math.random()*2; // 5..7
+      // постоянная «добротная» прокрутка на каждом спине
+      const DURATION = 10000; // 10 секунд всегда
+      const TURNS    = 7;     // одинаковое кол-во оборотов
 
       const startAngle = angle;
       const n = points.length; const arc = 2*Math.PI/n;
@@ -301,24 +295,50 @@
     }
     document.getElementById('spin').addEventListener('click', spin);
 
+    // ===== Вопросы
+    const rounds = [
+      { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
+      { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
+      { q: 'Как звали отца отца отца?', a: 'СЕМЁН' },
+      { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' },
+      { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК'] }
+    ];
+    const superRound = {
+      q: 'Белорусский дипломатический подарок, который всегда принимают без визы. Что это?',
+      a: ['БУЛЬБА']
+    };
+    let round = 0; let score = 0; let isSuper = false;
+
+    // ===== Модалки и видео
+    const qModal = document.getElementById('qModal');
+    const qTitle = document.getElementById('qTitle');
+    const dreamVideo = document.getElementById('dreamVideo');
+    const videoModal = document.getElementById('videoModal');
+    const closeVideo = document.getElementById('closeVideo');
+
     function finalize(idx){
       try{ spinSong.volume = 0.3; if (spinSong.paused) spinSong.play(); }catch(e){}
       const p = points[idx];
       log(`🎯 Выпало: <b>${p}</b> очков`);
-      document.getElementById('rule').innerHTML = `Твои очки за барабан: <span class="points">${p}</span>. Ответь на вопрос!`;
 
-      const titleEl = document.getElementById('qTitle');
-      titleEl.classList.toggle('super', isSuper);
-      titleEl.textContent = isSuper ? 'СУПЕР ИГРА' : 'Твои баллы';
-
-      const r = isSuper ? superRound : rounds[round];
-      setTimeout(()=>{
+      if(isSuper){
+        qTitle.textContent = 'СУПЕР ИГРА';
+        qTitle.classList.add('super');
         document.getElementById('qScore').textContent = `${p}`;
-        document.getElementById('qText').textContent  = r ? (isSuper ? `СУПЕР ВОПРОС: "${r.q}"` : `Твой вопрос: "${r.q}"`) : 'Игра окончена! 🎉';
-        qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
-      }, 1200);
+        document.getElementById('qText').innerHTML = `<b>СУПЕР ВОПРОС</b><br>Очки за правильный ответ удвоятся!<br><br>${superRound.q}`;
+      } else {
+        qTitle.textContent = 'Твои баллы';
+        qTitle.classList.remove('super');
+        document.getElementById('qScore').textContent = `${p}`;
+        const r = rounds[round];
+        document.getElementById('qText').textContent = `Твой вопрос: "${r ? r.q : ''}"`;
+      }
 
+      qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
       showQuestion();
+      document.getElementById('rule').innerHTML = isSuper
+        ? '<span class="points">СУПЕР ИГРА!</span> Ответь на супер-вопрос и удвой очки.'
+        : 'Ответь на вопрос!';
     }
 
     function log(html){
@@ -328,33 +348,16 @@
       box.prepend(d);
     }
 
-    // ===== Вопросы
-    const rounds = [
-      { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
-      { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
-      { q: 'Как звали отца отца отца?', a: 'СЕМЁН' },
-      { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' },
-      { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК'] }
-    ];
-    const superRound = { q: 'Белорусский дипломатический подарок, который всегда принимают без визы. Что это?', a: ['БУЛЬБА'] };
-
-    let round = 0; let score = 0;
-
     function normalizeRu(s){ return s.trim().toUpperCase().replace(/Ё/g,'Е'); }
     function getAcceptList(a){ return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)]; }
 
     function showQuestion(){
-      // если прошли все обычные — включаем супер-игру
-      if(round >= rounds.length){
-        isSuper = true;
-      }
       const r = isSuper ? superRound : rounds[round];
-      if(!r){ openGifts(score); return; }
-
-      const qEl = document.getElementById('question');
-      qEl.classList.toggle('super', isSuper);
-      qEl.textContent = isSuper ? `СУПЕР ИГРА: ${r.q}` : `Вопрос: ${r.q}`;
-
+      if(!r){
+        // если обычные раунды закончились — ждём супер-игру
+        return;
+      }
+      document.getElementById('question').textContent = isSuper ? `СУПЕР ИГРА: ${r.q}` : `Вопрос: ${r.q}`;
       const firstAns = Array.isArray(r.a) ? r.a[0] : r.a;
       document.getElementById('length').textContent  = `Слово из ${normalizeRu(firstAns).length} букв`;
       const input = document.getElementById('answer'); input.value=''; input.focus();
@@ -371,42 +374,33 @@
         box.classList.remove('wrong'); box.classList.add('correct');
         const p = parseInt(document.getElementById('qScore').textContent || '0', 10);
         if(!isNaN(p)){
-          const gain = isSuper ? p*2 : p; // удвоение в супер-игре
-          score += gain;
-          document.getElementById('score').textContent = score;
-          log(isSuper ? `💥 СУПЕР ИГРА! +${gain} очков` : '✅ Совершенно верно!');
-        } else {
-          log('✅ Совершенно верно!');
+          const gain = isSuper ? p*2 : p;
+          score += gain; document.getElementById('score').textContent = score;
         }
-
+        log(isSuper ? '💥 СУПЕР ИГРА — верно! Очки удвоены.' : '✅ Совершенно верно!');
         launchConfetti();
-
-        // победный звук + подсказка к рулетке (в обычных раундах)
-        const sfx = (Math.random()<0.5 ? winSfx1 : winSfx2);
-        try{
-          sfx.currentTime = 0;
-          const onEnd = () => { sfx.removeEventListener('ended', onEnd); if(!isSuper){ try{ spinHint.currentTime=0; spinHint.play(); }catch(e){} } };
-          sfx.addEventListener('ended', onEnd);
-          sfx.play().catch(()=>{ if(!isSuper){ try{ spinHint.currentTime=0; spinHint.play(); }catch(e){} } });
-        }catch(e){}
+        try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
 
         if(isSuper){
-          // закрываем модал вопроса, показываем видео, затем — подарки
+          // Закрываем модал вопроса → видео → подарки
           setTimeout(()=>{
-            qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
+            qModal.classList.remove('show');
+            qModal.setAttribute('aria-hidden','true');
+            try{ spinSong.pause(); }catch(e){}
             openVideoThenGifts();
-          }, 500);
+          }, 600);
         } else {
           round++;
           setTimeout(()=>{
             document.getElementById('rule').textContent = 'Снова крути барабан!';
             document.getElementById('question').textContent = 'Вопрос появится после барабана.';
             document.getElementById('length').textContent = '';
+            qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
+
             if(round >= rounds.length){
-              // после последнего обычного раунда — объявляем супер-игру
-              setTimeout(()=>{
-                document.getElementById('rule').innerHTML = '<span class="points">СУПЕР ИГРА!</span> Крути барабан для супер-вопроса. Очки за ответ удвоятся.';
-              }, 400);
+              // Переход в супер-игру, просим ещё раз крутануть
+              isSuper = true;
+              document.getElementById('rule').innerHTML = '<span class="points">СУПЕР ИГРА!</span> Крути барабан для супер-вопроса.';
             }
           }, 600);
         }
@@ -419,42 +413,17 @@
     document.getElementById('submit').addEventListener('click', checkAnswer);
     document.getElementById('answer').addEventListener('keydown', e=>{ if(e.key==='Enter') checkAnswer(); });
 
-    // Result modal controls
-    const qModal = document.getElementById('qModal');
+    // Закрытие модалки очков/вопроса вручную
     document.getElementById('qClose').addEventListener('click',()=>{
       qModal.classList.remove('show');
       qModal.setAttribute('aria-hidden','true');
       document.getElementById('answer').focus();
     });
 
-    // ===== Видео: dreamina.mp4 =====
-    const videoModal = document.getElementById('videoModal');
-    const dreamVideo = document.getElementById('dreamVideo');
-    const closeVideo = document.getElementById('closeVideo');
-
-    function openVideoThenGifts(){
-      videoModal.classList.add('show'); videoModal.setAttribute('aria-hidden','false');
-      closeVideo.classList.add('hide');
-      try{ dreamVideo.currentTime = 0; dreamVideo.play().catch(()=>{}); }catch(e){}
-    }
-    // показать кнопку «Закрыть» после окончания
-    dreamVideo.addEventListener('ended', ()=>{ closeVideo.classList.remove('hide'); });
-    // можно закрыть и открыть подарки
-    closeVideo.addEventListener('click', ()=>{
-      videoModal.classList.remove('show'); videoModal.setAttribute('aria-hidden','true');
-      openGifts(score);
-    });
-    // если пользователь сам закрыл управление/поставил на паузу и хочет выйти — по ESC
-    document.addEventListener('keydown', (e)=>{
-      if(e.key === 'Escape' && videoModal.classList.contains('show')){
-        closeVideo.click();
-      }
-    });
-
     document.getElementById('reset').addEventListener('click', ()=>{
       try{ spinSong.pause(); }catch(e){}
       spinSong.currentTime=0; spinSong.volume=0.3;
-      score=0; round=0; angle=0; isSuper=false;
+      score=0; round=0; angle=0; spinCount=0; isSuper=false;
       document.getElementById('score').textContent='0';
       document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.';
       document.getElementById('question').textContent='Вопрос появится после барабана.';
@@ -463,6 +432,20 @@
       document.getElementById('finalModal').classList.remove('show'); document.getElementById('finalModal').setAttribute('aria-hidden','true');
       videoModal.classList.remove('show'); videoModal.setAttribute('aria-hidden','true');
       drawWheel(0); document.getElementById('log').innerHTML='';
+    });
+
+    // ===== Видео
+    function openVideoThenGifts(){
+      videoModal.classList.add('show');
+      videoModal.setAttribute('aria-hidden','false');
+      closeVideo.classList.add('hide');
+      try{ dreamVideo.currentTime=0; dreamVideo.play().catch(()=>{}); }catch(e){}
+    }
+    dreamVideo.addEventListener('ended', ()=> closeVideo.classList.remove('hide'));
+    closeVideo.addEventListener('click', ()=>{
+      videoModal.classList.remove('show');
+      videoModal.setAttribute('aria-hidden','true');
+      openGifts(score);
     });
 
     // ===== Конфетти
@@ -491,20 +474,18 @@
       draw();
     }
 
-    // ===== Финальный экран подарков =====
+    // ===== Подарки (без категорий для игрока)
     const gifts = [
-      {name:'Горный велосипед', img:'bike.jpg', desc:'Надёжный MTB велосипед для настоящих приключений.', type:'max'},
-      {name:'Прыжок с парашютом', img:'parachute.jpg', desc:'Чистый адреналин и незабываемые эмоции.', type:'max'},
-      {name:'Вайбовая колонка', img:'speaker.jpg', desc:'Громкий звук и пульсирующая подсветка.', type:'max'},
-      {name:'E-book Amazon последняя версия', img:'ebook.jpg', desc:'Новая Kindle для чтения где угодно.', type:'max'},
-
-      {name:'Очки с экшн камерой Mi', img:'glasses.jpg', desc:'Снимай всё глазами — POV-формат.', type:'half'},
-      {name:'Кольцо для отслеживания сна Mijia', img:'ring.jpg', desc:'Твой сон и активность — под контролем.', type:'half'},
-      {name:'Скидка 50% на авиабилет в любую страну', img:'plane.jpg', desc:'Выбирай направление — полдела уже сделано!', type:'half'},
-
-      {name:'Поездка в национальный парк Нарочаны на выходные', img:'naroch.jpg', desc:'Свежий воздух, леса и озёра.', type:'third'},
-      {name:'Билеты на концерт Macan в Крокус Сити', img:'macan.jpg', desc:'Рванём на концерт вместе!', type:'third'},
-      {name:'Годовой абонемент на шаурму', img:'shawarma.jpg', desc:'12 месяцев душевной шаурмы.', type:'third'}
+      {name:'Горный велосипед', kind:'max', img:'bike.jpg', desc:'Надёжный MTB велосипед для настоящих приключений.'},
+      {name:'Прыжок с парашютом', kind:'max', img:'parachute.jpg', desc:'Чистый адреналин и незабываемые эмоции.'},
+      {name:'Вайбовая колонка', kind:'half', img:'speaker.jpg', desc:'Громкий звук и пульсирующая подсветка.'},
+      {name:'E-book Amazon последняя версия', kind:'half', img:'ebook.jpg', desc:'Новая Kindle для чтения где угодно.'},
+      {name:'Очки с экшн камерой Mi', kind:'half', img:'glasses.jpg', desc:'Снимай всё глазами — POV-формат.'},
+      {name:'Кольцо для отслеживания сна Mijia', kind:'third', img:'ring.jpg', desc:'Твой сон и активность — под контролем.'},
+      {name:'Скидка 50% на авиабилет в любую страну', kind:'third', img:'plane.jpg', desc:'Выбирай направление — полдела уже сделано!'},
+      {name:'Поездка в национальный парк Нарочаны на выходные', kind:'third', img:'naroch.jpg', desc:'Свежий воздух, леса и озёра.'},
+      {name:'Билеты на концерт Macan в Крокус Сити', kind:'third', img:'macan.jpg', desc:'Рванём на концерт вместе!'},
+      {name:'Годовой абонемент на шаурму', kind:'third', img:'shawarma.jpg', desc:'12 месяцев душевной шаурмы.'}
     ];
 
     const finalModal = document.getElementById('finalModal');
@@ -519,36 +500,29 @@
 
     let budget=0, selection={}, pricedGifts=[];
 
-    function roundDown100(x){ return Math.max(100, Math.floor(x/100)*100); }
-    function randF(min,max){ return min + Math.random()*(max-min); }
+    function randRange(min,max){ return Math.floor(Math.random()*(max-min)+min); }
+    const round100 = v => Math.max(100, Math.round(v/100)*100); // кратно 100
 
     function openGifts(finalScore){
-      budget = Math.max(0, finalScore|0);
+      budget = finalScore;
       budgetEl.textContent = budget.toString();
       spentEl.textContent = '0';
       finalWarn.textContent = '';
       finalIntro.textContent = `Евгений, твой итоговый счёт — ${finalScore} очков. Выбирай призы на эту сумму:`;
 
+      // цены без показа категорий игроку:
+      // max ~ 90–100% бюджета
+      // half ~ 40–50% бюджета
+      // third ~ <= 25% бюджета
       pricedGifts = gifts.map(g=>{
-        let price=0;
-        if(g.type==='max'){
-          const hi = Math.max(100, Math.min(budget, budget*0.98));
-          const lo = Math.max(100, Math.min(hi, budget*0.90));
-          price = roundDown100(randF(lo, hi));
-          price = Math.min(price, Math.max(100, roundDown100(budget)));
-        }else if(g.type==='half'){
-          const lo = budget*0.44, hi = budget*0.48;
-          price = roundDown100(randF(lo, hi));
-          price = Math.min(price, roundDown100(budget*0.49));
-        }else{
-          const lo = budget*0.22, hi = budget*0.25;
-          price = roundDown100(randF(lo, hi));
-          price = Math.min(price, roundDown100(budget*0.25));
-        }
-        if(price < 100) price = 100;
-        return {...g, price};
+        let price = 0;
+        if(g.kind==='max')   price = randRange(budget*0.9,  budget*1.0);
+        else if(g.kind==='half')  price = randRange(budget*0.40, budget*0.50);
+        else                 price = randRange(budget*0.18, budget*0.25);
+        return {...g, price: round100(price)};
       });
 
+      // рендер
       giftListEl.innerHTML = '';
       selection = {};
       pricedGifts.forEach((g,idx)=>{
@@ -573,7 +547,7 @@
 
       btnConfirm.onclick = confirmGifts;
       btnClear.onclick = clearSelection;
-      btnClose.onclick  = ()=>closeGifts();
+      btnClose.onclick = ()=>closeGifts();
 
       finalModal.classList.add('show'); finalModal.setAttribute('aria-hidden','false');
     }
@@ -582,13 +556,11 @@
       finalModal.classList.remove('show');
       finalModal.setAttribute('aria-hidden','true');
     }
-
     function onSelectChange(e){
       const idx = parseInt(e.target.dataset.idx,10);
       selection[idx] = e.target.checked;
       recompute();
     }
-
     function recompute(){
       let spent = 0;
       Object.entries(selection).forEach(([k,v])=>{
@@ -596,20 +568,17 @@
         const g = pricedGifts[parseInt(k,10)];
         spent += g.price;
       });
-
       spentEl.textContent = spent.toString();
       let warn = '';
       if(spent > budget) warn = 'Перебор бюджета.';
       finalWarn.textContent = warn;
       btnConfirm.disabled = warn.length>0 || spent===0;
     }
-
     function clearSelection(){
       selection = {};
       document.querySelectorAll('#giftList input[type="checkbox"]').forEach(cb=> cb.checked=false);
       recompute();
     }
-
     function confirmGifts(){
       const chosen = Object.entries(selection)
         .filter(([,v])=>v)
@@ -621,6 +590,7 @@
   </script>
 </body>
 </html>
+
 
 
 
