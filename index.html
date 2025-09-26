@@ -68,7 +68,6 @@
       background:linear-gradient(180deg,#12265c,#0d1b46);
       border:1px solid rgba(255,255,255,.12); box-shadow:0 28px 90px rgba(0,0,0,.55); text-align:center}
     .modal-title{margin:0 0 8px; color:var(--gold); font-weight:900}
-    .modal-title.super{font-size:28px; letter-spacing:1px}
     .modal-text{font-weight:800; margin:6px 0 14px}
     .bigScore{font-weight:900; font-size:clamp(42px, 9vw, 120px); line-height:1; color:var(--gold);
       text-shadow:0 2px 0 #000,0 10px 26px rgba(0,0,0,.35)}
@@ -76,28 +75,25 @@
     .points{font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(255,220,115,.9)}
     canvas.confetti{position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:2000}
 
-    /* ===== Видео-модал (на весь экран) ===== */
-    .video-modal{position:fixed; inset:0; background:rgba(0,0,0,.95); display:none; place-items:center; z-index:2400}
-    .video-modal.show{display:grid}
-    .video-wrap{width:min(1280px, 96vw); height:min(720px, 80vh); position:relative; display:grid; place-items:center}
-    .video-wrap video{width:100%; height:100%; object-fit:contain; background:#000; border-radius:12px; box-shadow:0 28px 90px rgba(0,0,0,.6)}
-    .video-ctrls{position:absolute; right:10px; bottom:10px}
-    .video-ctrls .hide{display:none}
-
-    /* ===== Финальный экран подарков ===== */
+    /* Final gifts */
     .final{position:fixed; inset:0; background:rgba(0,0,0,.86); display:none; place-items:center; z-index:2200}
     .final.show{display:grid}
     .final-card{width:min(980px,94vw); background:linear-gradient(180deg,#112552,#0d1c45); color:var(--ink);
       border:1px solid rgba(255,255,255,.12); border-radius:20px; box-shadow:0 28px 90px rgba(0,0,0,.55); padding:18px}
     .final-title{margin:0; color:var(--gold); font-weight:900}
     .gift-grid{display:grid; gap:10px; margin-top:14px}
-    .gift-row{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; background:#0b1636; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px}
+    .gift-row{display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; background:#0b1636; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px}
     .gift-row a{color:var(--gold); text-decoration:underline; cursor:pointer}
-    .gift-detail{display:none; grid-column:1/-1; background:#0e1b44; border-radius:10px; padding:10px}
-    .gift-detail img{max-width:100%; border-radius:10px; display:block; margin:6px auto}
     .final-bar{display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap}
     .pill{background:#0e1a44; border:1px solid rgba(255,255,255,.15); border-radius:999px; padding:8px 12px; font-weight:800}
     .warn{color:#ff7a7a}
+
+    /* Fullscreen video */
+    .vmodal{position:fixed; inset:0; background:rgba(0,0,0,.96); display:none; place-items:center; z-index:3000}
+    .vmodal.show{display:grid}
+    .vwrap{position:relative; width:min(1280px,96vw)}
+    .vwrap video{width:100%; height:auto; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.6)}
+    .vclose{position:absolute; top:-44px; right:0}
   </style>
 </head>
 <body>
@@ -156,33 +152,33 @@
     </div>
   </div>
 
-  <!-- Модал очков и вопроса -->
+  <!-- Q modal -->
   <div id="qModal" class="modal" aria-hidden="true">
     <div class="modal-card">
-      <h3 id="qTitle" class="modal-title">Твои баллы</h3>
+      <h3 class="modal-title" id="qTitle">Твои баллы</h3>
       <div id="qScore" class="modal-text bigScore"></div>
       <div id="qText" class="modal-text"></div>
-      <button id="qClose" class="btn">ЙООУ ✔️</button>
+      <button id="qClose" class="btn">Окей</button>
     </div>
   </div>
 
-  <!-- Видео-модал -->
-  <div id="videoModal" class="video-modal" aria-hidden="true">
-    <div class="video-wrap">
-      <video id="dreamVideo" src="dreamina.mp4" playsinline controls></video>
-      <div class="video-ctrls">
-        <button id="closeVideo" class="btn btn-ghost hide">Закрыть</button>
-      </div>
+  <!-- Fullscreen video -->
+  <div id="videoModal" class="vmodal" aria-hidden="true">
+    <div class="vwrap">
+      <button id="videoClose" class="btn vclose">Закрыть ✖</button>
+      <video id="finalVideo" src="dreamina.mp4" controls></video>
     </div>
   </div>
 
-  <!-- Финальный экран подарков -->
+  <!-- Gifts -->
   <div id="finalModal" class="final" aria-hidden="true">
     <div class="final-card">
       <h3 class="final-title">🏆 Выбор подарков</h3>
       <p id="finalIntro" class="sub"></p>
       <div class="pill">Бюджет: <b id="budget"></b> очков • Выбрано: <b id="spent">0</b></div>
+
       <div id="giftList" class="gift-grid"></div>
+
       <div class="final-bar">
         <div id="finalWarn" class="warn"></div>
         <div style="display:flex; gap:8px">
@@ -216,17 +212,17 @@
     });
     introClose.addEventListener('click', ()=>{ intro.classList.add('hide'); try{ introAudio.pause(); }catch(e){} });
 
-    // ===== Звуки
+    // ===== Sounds
     const spinSong = new Audio('song.mp3'); spinSong.loop = true; spinSong.preload = 'auto'; spinSong.volume = 0.3;
     const wrongSfx = new Audio('pole_letter_wrong.mp3');
     const winSfx1  = new Audio('zrejdbxx.mp3');
     const winSfx2  = new Audio('pole_word_1996.mp3');
 
-    // ===== Барабан
+    // ===== Wheel
     const points = [100,200,300,400,500,600,700,800,900,1000];
     const wheel  = document.getElementById('wheel');
     const ctx    = wheel.getContext('2d');
-    let angle=0, spinning=false, spinCount=0;
+    let angle=0, spinning=false;
 
     function drawWheel(a=0){
       const W = wheel.width  = wheel.clientWidth  * devicePixelRatio;
@@ -239,7 +235,6 @@
         ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,i*arc,(i+1)*arc);
         ctx.fillStyle = (i%2? '#103079':'#142d63'); ctx.fill();
         ctx.strokeStyle = '#0a1e4f'; ctx.lineWidth = 3*devicePixelRatio; ctx.stroke();
-        // цифры
         ctx.save(); ctx.rotate(i*arc + arc/2); ctx.fillStyle = '#ffdc73';
         ctx.font = `${Math.max(18*devicePixelRatio,R*0.085)}px system-ui`;
         ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -247,7 +242,6 @@
         ctx.fillText(points[i].toString(),0,0);
         ctx.restore();
       }
-      // лампочки
       const bulbs = 72;
       for(let i=0;i<bulbs;i++){
         const ang = a + (i/bulbs)*Math.PI*2;
@@ -265,14 +259,12 @@
 
     function spin(){
       if(spinning) return;
-      spinning = true; spinCount++;
+      spinning = true;
 
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      // постоянная «добротная» прокрутка на каждом спине
-      const DURATION = 10000; // 10 секунд всегда
-      const TURNS    = 7;     // одинаковое кол-во оборотов
-
+      const DURATION = 10000;     // фиксированно ~10с каждый раз
+      const TURNS    = 7;         // фиксированное число оборотов
       const startAngle = angle;
       const n = points.length; const arc = 2*Math.PI/n;
 
@@ -295,50 +287,21 @@
     }
     document.getElementById('spin').addEventListener('click', spin);
 
-    // ===== Вопросы
-    const rounds = [
-      { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
-      { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
-      { q: 'Как звали отца отца отца?', a: 'СЕМЁН' },
-      { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' },
-      { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК'] }
-    ];
-    const superRound = {
-      q: 'Белорусский дипломатический подарок, который всегда принимают без визы. Что это?',
-      a: ['БУЛЬБА']
-    };
-    let round = 0; let score = 0; let isSuper = false;
-
-    // ===== Модалки и видео
-    const qModal = document.getElementById('qModal');
-    const qTitle = document.getElementById('qTitle');
-    const dreamVideo = document.getElementById('dreamVideo');
-    const videoModal = document.getElementById('videoModal');
-    const closeVideo = document.getElementById('closeVideo');
-
     function finalize(idx){
       try{ spinSong.volume = 0.3; if (spinSong.paused) spinSong.play(); }catch(e){}
       const p = points[idx];
       log(`🎯 Выпало: <b>${p}</b> очков`);
+      document.getElementById('rule').innerHTML = `Твои очки за барабан: <span class="points">${p}</span>. Ответь на вопрос!`;
 
-      if(isSuper){
-        qTitle.textContent = 'СУПЕР ИГРА';
-        qTitle.classList.add('super');
+      const r = rounds[round];
+      setTimeout(()=>{
+        document.getElementById('qTitle').textContent = 'Твои баллы';
         document.getElementById('qScore').textContent = `${p}`;
-        document.getElementById('qText').innerHTML = `<b>СУПЕР ВОПРОС</b><br>Очки за правильный ответ удвоятся!<br><br>${superRound.q}`;
-      } else {
-        qTitle.textContent = 'Твои баллы';
-        qTitle.classList.remove('super');
-        document.getElementById('qScore').textContent = `${p}`;
-        const r = rounds[round];
-        document.getElementById('qText').textContent = `Твой вопрос: "${r ? r.q : ''}"`;
-      }
+        document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
+        qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
+      }, 1200);
 
-      qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
       showQuestion();
-      document.getElementById('rule').innerHTML = isSuper
-        ? '<span class="points">СУПЕР ИГРА!</span> Ответь на супер-вопрос и удвой очки.'
-        : 'Ответь на вопрос!';
     }
 
     function log(html){
@@ -348,16 +311,27 @@
       box.prepend(d);
     }
 
+    // ===== Questions
+    const rounds = [
+      { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
+      { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
+      { q: 'Как звали отца отца отца?', a: 'СЕМЁН' },
+      { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' },
+      { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК'] }
+    ];
+    let round = 0; let score = 0;
+
     function normalizeRu(s){ return s.trim().toUpperCase().replace(/Ё/g,'Е'); }
     function getAcceptList(a){ return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)]; }
 
     function showQuestion(){
-      const r = isSuper ? superRound : rounds[round];
+      const r = rounds[round];
       if(!r){
-        // если обычные раунды закончились — ждём супер-игру
+        // все вопросы пройдены — короткая пауза и финальное видео, потом подарки
+        endGameWithVideo();
         return;
       }
-      document.getElementById('question').textContent = isSuper ? `СУПЕР ИГРА: ${r.q}` : `Вопрос: ${r.q}`;
+      document.getElementById('question').textContent = `Вопрос: ${r.q}`;
       const firstAns = Array.isArray(r.a) ? r.a[0] : r.a;
       document.getElementById('length').textContent  = `Слово из ${normalizeRu(firstAns).length} букв`;
       const input = document.getElementById('answer'); input.value=''; input.focus();
@@ -365,7 +339,7 @@
     }
 
     function checkAnswer(){
-      const r = isSuper ? superRound : rounds[round]; if(!r) return;
+      const r = rounds[round]; if(!r) return;
       const got  = normalizeRu(document.getElementById('answer').value);
       const list = getAcceptList(r.a);
       const box  = document.getElementById('answerBox');
@@ -373,37 +347,21 @@
       if(list.includes(got)){
         box.classList.remove('wrong'); box.classList.add('correct');
         const p = parseInt(document.getElementById('qScore').textContent || '0', 10);
-        if(!isNaN(p)){
-          const gain = isSuper ? p*2 : p;
-          score += gain; document.getElementById('score').textContent = score;
-        }
-        log(isSuper ? '💥 СУПЕР ИГРА — верно! Очки удвоены.' : '✅ Совершенно верно!');
+        if(!isNaN(p)){ score += p; document.getElementById('score').textContent = score; }
+        log('✅ Совершенно верно!');
         launchConfetti();
         try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
 
-        if(isSuper){
-          // Закрываем модал вопроса → видео → подарки
-          setTimeout(()=>{
-            qModal.classList.remove('show');
-            qModal.setAttribute('aria-hidden','true');
-            try{ spinSong.pause(); }catch(e){}
-            openVideoThenGifts();
-          }, 600);
-        } else {
-          round++;
-          setTimeout(()=>{
-            document.getElementById('rule').textContent = 'Снова крути барабан!';
-            document.getElementById('question').textContent = 'Вопрос появится после барабана.';
-            document.getElementById('length').textContent = '';
-            qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
-
-            if(round >= rounds.length){
-              // Переход в супер-игру, просим ещё раз крутануть
-              isSuper = true;
-              document.getElementById('rule').innerHTML = '<span class="points">СУПЕР ИГРА!</span> Крути барабан для супер-вопроса.';
-            }
-          }, 600);
-        }
+        round++;
+        setTimeout(()=>{
+          document.getElementById('rule').textContent = 'Снова крути барабан!';
+          document.getElementById('question').textContent = 'Вопрос появится после барабана.';
+          document.getElementById('length').textContent = '';
+          if(round >= rounds.length){
+            // дальше — финальное видео => подарки
+            // ничего не делаем тут — showQuestion вызовется из finalize следующего спина не будет, т.к. спинов больше нет
+          }
+        }, 500);
       } else {
         box.classList.remove('correct'); box.classList.add('wrong');
         log('❌ Неверно, попробуй ещё раз.');
@@ -413,7 +371,8 @@
     document.getElementById('submit').addEventListener('click', checkAnswer);
     document.getElementById('answer').addEventListener('keydown', e=>{ if(e.key==='Enter') checkAnswer(); });
 
-    // Закрытие модалки очков/вопроса вручную
+    // Q modal controls
+    const qModal = document.getElementById('qModal');
     document.getElementById('qClose').addEventListener('click',()=>{
       qModal.classList.remove('show');
       qModal.setAttribute('aria-hidden','true');
@@ -423,32 +382,18 @@
     document.getElementById('reset').addEventListener('click', ()=>{
       try{ spinSong.pause(); }catch(e){}
       spinSong.currentTime=0; spinSong.volume=0.3;
-      score=0; round=0; angle=0; spinCount=0; isSuper=false;
+      score=0; round=0; angle=0;
       document.getElementById('score').textContent='0';
       document.getElementById('rule').textContent='Правила: нажми «Крутить», дождись очков и отвечай на вопрос.';
       document.getElementById('question').textContent='Вопрос появится после барабана.';
       document.getElementById('length').textContent='';
       qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
       document.getElementById('finalModal').classList.remove('show'); document.getElementById('finalModal').setAttribute('aria-hidden','true');
-      videoModal.classList.remove('show'); videoModal.setAttribute('aria-hidden','true');
+      document.getElementById('videoModal').classList.remove('show'); document.getElementById('videoModal').setAttribute('aria-hidden','true');
       drawWheel(0); document.getElementById('log').innerHTML='';
     });
 
-    // ===== Видео
-    function openVideoThenGifts(){
-      videoModal.classList.add('show');
-      videoModal.setAttribute('aria-hidden','false');
-      closeVideo.classList.add('hide');
-      try{ dreamVideo.currentTime=0; dreamVideo.play().catch(()=>{}); }catch(e){}
-    }
-    dreamVideo.addEventListener('ended', ()=> closeVideo.classList.remove('hide'));
-    closeVideo.addEventListener('click', ()=>{
-      videoModal.classList.remove('show');
-      videoModal.setAttribute('aria-hidden','true');
-      openGifts(score);
-    });
-
-    // ===== Конфетти
+    // ===== Confetti
     function launchConfetti(){
       const c=document.createElement('canvas'); c.className='confetti'; document.body.appendChild(c);
       const cx=c.getContext('2d'); const DPR=window.devicePixelRatio||1;
@@ -474,18 +419,52 @@
       draw();
     }
 
-    // ===== Подарки (без категорий для игрока)
-    const gifts = [
-      {name:'Горный велосипед', kind:'max', img:'bike.jpg', desc:'Надёжный MTB велосипед для настоящих приключений.'},
-      {name:'Прыжок с парашютом', kind:'max', img:'parachute.jpg', desc:'Чистый адреналин и незабываемые эмоции.'},
-      {name:'Вайбовая колонка', kind:'half', img:'speaker.jpg', desc:'Громкий звук и пульсирующая подсветка.'},
-      {name:'E-book Amazon последняя версия', kind:'half', img:'ebook.jpg', desc:'Новая Kindle для чтения где угодно.'},
-      {name:'Очки с экшн камерой Mi', kind:'half', img:'glasses.jpg', desc:'Снимай всё глазами — POV-формат.'},
-      {name:'Кольцо для отслеживания сна Mijia', kind:'third', img:'ring.jpg', desc:'Твой сон и активность — под контролем.'},
-      {name:'Скидка 50% на авиабилет в любую страну', kind:'third', img:'plane.jpg', desc:'Выбирай направление — полдела уже сделано!'},
-      {name:'Поездка в национальный парк Нарочаны на выходные', kind:'third', img:'naroch.jpg', desc:'Свежий воздух, леса и озёра.'},
-      {name:'Билеты на концерт Macan в Крокус Сити', kind:'third', img:'macan.jpg', desc:'Рванём на концерт вместе!'},
-      {name:'Годовой абонемент на шаурму', kind:'third', img:'shawarma.jpg', desc:'12 месяцев душевной шаурмы.'}
+    // ===== Final video then gifts
+    const videoModal = document.getElementById('videoModal');
+    const finalVideo = document.getElementById('finalVideo');
+    const videoClose = document.getElementById('videoClose');
+
+    function endGameWithVideo(){
+      // маленькая пауза перед показом видео
+      setTimeout(()=>{
+        try{ spinSong.pause(); }catch(e){}
+        videoModal.classList.add('show'); videoModal.setAttribute('aria-hidden','false');
+        try{ finalVideo.currentTime = 0; finalVideo.play(); }catch(e){}
+      }, 2000); // пауза перед видео
+    }
+
+    function closeVideoAndOpenGifts(){
+      try{ finalVideo.pause(); }catch(e){}
+      videoModal.classList.remove('show'); videoModal.setAttribute('aria-hidden','true');
+      openGifts(score);
+    }
+
+    videoClose.addEventListener('click', closeVideoAndOpenGifts);
+    finalVideo.addEventListener('ended', ()=> {
+      // по окончании видео просто показываем кнопку "Закрыть" (она уже есть),
+      // пользователь сам решит — закрыть сейчас или пересмотреть.
+    });
+
+    // ===== Gifts
+    const giftsSource = [
+      // (4/4)
+      {name:'Горный велосипед', tier:'4/4', desc:'Согласовывается индивидуально'},
+      {name:'Прыжок с парашютом в любой точке мира', tier:'4/4', desc:'Даётся неограниченный по времени купон для прыжка в любом месте'},
+      {name:'Вайбовая колонка Marshall', tier:'4/4', link:'https://catalog.onliner.by/wspeaker/marshall/acton2bl1'},
+      {name:'E-book Amazon последняя версия', tier:'4/4', link:'https://kindle.by/devices/amazon-kindle-paperwhite-6-12-generation-16gb-black'},
+
+      // (2/4)
+      {name:'Алисина колонка (AI edition)', tier:'2/4', link:'https://catalog.onliner.by/wspeaker/yandex/yanstmidiblk'},
+      {name:'Премиум наушники Realme (последняя модель)', tier:'2/4', link:'https://market.yandex.ru/card/naushniki-besprovodnyye-realme-buds-air7air7-pro-bluetooth-c-shumopodavleniyem/4598149761?do-waremd5=HbJaYobNJ7zDtdV7Toe1cA&sponsored=1&cpc=eGiwCaltmhbiDEhIogGOZIfhhnejIxuiwGDOjvCmOD96swKkTPv0JNMt3Y_3XeEVhoZRhyBb3lFaFeXVs_b8J_B4S0xOmRIFQX1_kkYxqPec5dOivpIKH5Qp_dx6W5cBBsJ5G9S-cDrZVhQUWYHoU6OhXmMS7JoBeoYBaDp3Hk2l8HVmkfL3JBIH_Pc6cO5mIehnQ0WUdoxTNrLF-i7dTS_ikl1mc8F6gSYWH8CSbt-MkMD9ubOh2ZwFHs2QpJHZ3jJAfqiAPSdUYEOh8jH3q2iIMelPWNb1Izzui_XkyfoKxMvHSlnWlBhA9SjDfvIakGT3Wf5--GfZPHH4T-pIpvKlpF_6gXTNVzE3J91RCm_DukkBxCeGO9vwd1OgfrrKt87R4YnH7fv4sjyX1gxgDg3av3PX7f_BxLUhHUybypnmElNdaNAsCZCLTiNDgFOjTFV6anh9J2EK9L5IxKs0dAm3A5Y28PLVFah5U3zC6OrzdmHhN_jbYXCEOLXJTLBxHkx3RyFlVcG0GlJt7LmNVfNB9Wq5R0xNX2SVu5vVI1lWJ0Cm79U6qU79eewAgvXaHGfWhXvfCqgVp_WbklR2Ew%2C%2C&ogV=-4'},
+      {name:'Скидка 30% на авиабилет в любую страну', tier:'2/4', desc:'Скидка предоставляется по запросу и приходит в виде USDT'},
+      {name:'Отдых в баньке «Избушка»', tier:'2/4', link:'https://www.saunaminska.by/izbushka.htm'},
+      {name:'Поездка в национальный парк Нарочаны на выходные', tier:'2/4', desc:'Не, ну можем и такое организовать :))'},
+      {name:'Очки с камерой 4K Indigo Polarized', tier:'2/4', link:'https://catalog.onliner.by/actioncamera/xtry/xtg113fhdindigop'},
+
+      // (1/4)
+      {name:'Аэрогриль Брайер «Йооу эдишн BR2039»', tier:'1/4', link:'https://brayer.ru/catalog/aerogrili/aerogril-brayer-br2039/'},
+      {name:'Электрическая зубная щётка Oclean', tier:'1/4', link:'https://catalog.onliner.by/toothbrush/oclean/oclexproelitegre'},
+      {name:'Кольцо для отслеживания сна Mijia', tier:'1/4', link:'https://market.yandex.ru/card/xiaomi-smart-ring-bluetooth-black-size-11/4589470934?do-waremd5=kQiB0GAlTYetiYIEuMTFzg&cpc=btYqqIlf1j_d006RY_IKbrxejstrKi14H-JgxeCaABVEF91Fgc40usZYfWyRTrF1zPedQGfOsBBGV43jY9Iw0qGtR31vhk9iYnCuu51y3BQSCAEILqQw3mP09xEV3CylBV1vaLCToRDCyBnwNhewdniY9JxMsdNAffqda-1C3hiRULh5EZOwd9H924jOBjLkV4bpKORVAunl8TWpVmh_UUKs0S_Y62aHCO78I6u53t7UPOI-zCCBj8aDk523MuWEMwu1O1iejiwdTVpcOLIJ7Vdw9upueL2tD_rjcm0clDSFPp4fzYDNg9DKCbN89rMla0GeCztd83oXmxGkidxCcaARwt-7r63WL2Ra5alJkv-WgEzYQAIOz9fGeifF7Q-Rk2ylM6yYuhBRHBlYfS9oGWmGfldT7xVszxKBZQUg8jonLhv0uinaUDuBnpLrfzcoD1SLxqh6lu8__72lQUmK3U7eOI-Lbnp2J-NFVBAUrAlrrYNPDjAtJ0NE4f-vwoMHeI-WHiV2MA3fMeOjo6MwCnu8qiFk1EdY4JUOcyE4zRWEpt4Yj97NQgQeogMHUkXw&ogV=-4'}
     ];
 
     const finalModal = document.getElementById('finalModal');
@@ -500,8 +479,15 @@
 
     let budget=0, selection={}, pricedGifts=[];
 
-    function randRange(min,max){ return Math.floor(Math.random()*(max-min)+min); }
-    const round100 = v => Math.max(100, Math.round(v/100)*100); // кратно 100
+    function roundTo100(x){ return Math.max(100, Math.round(x/100)*100); }
+    function randRange(min,max){ return Math.random()*(max-min)+min; }
+
+    function priceByTier(tier, total){
+      if(tier==='4/4') return roundTo100(randRange(total*0.90, total*1.00));
+      if(tier==='2/4') return roundTo100(randRange(total*0.40, total*0.48));
+      // 1/4
+      return roundTo100(randRange(total*0.20, total*0.25));
+    }
 
     function openGifts(finalScore){
       budget = finalScore;
@@ -510,16 +496,10 @@
       finalWarn.textContent = '';
       finalIntro.textContent = `Евгений, твой итоговый счёт — ${finalScore} очков. Выбирай призы на эту сумму:`;
 
-      // цены без показа категорий игроку:
-      // max ~ 90–100% бюджета
-      // half ~ 40–50% бюджета
-      // third ~ <= 25% бюджета
-      pricedGifts = gifts.map(g=>{
-        let price = 0;
-        if(g.kind==='max')   price = randRange(budget*0.9,  budget*1.0);
-        else if(g.kind==='half')  price = randRange(budget*0.40, budget*0.50);
-        else                 price = randRange(budget*0.18, budget*0.25);
-        return {...g, price: round100(price)};
+      // цены
+      pricedGifts = giftsSource.map(g=>{
+        const price = priceByTier(g.tier, budget);
+        return {...g, price};
       });
 
       // рендер
@@ -528,21 +508,25 @@
       pricedGifts.forEach((g,idx)=>{
         const row = document.createElement('div');
         row.className = 'gift-row';
-        row.innerHTML = `
-          <label><input type="checkbox" data-idx="${idx}"/></label>
-          <div><a data-open="${idx}">${g.name}</a> — <b>${g.price}</b> очков</div>
-          <div></div>
-        `;
-        const detail = document.createElement('div');
-        detail.className = 'gift-detail';
-        detail.innerHTML = `<img src="${g.img}" alt=""><p>${g.desc}</p>`;
-        row.appendChild(detail);
 
-        row.querySelector(`a[data-open="${idx}"]`).addEventListener('click',()=>{
-          detail.style.display = (detail.style.display==='block') ? 'none' : 'block';
-        });
-        row.querySelector('input[type="checkbox"]').addEventListener('change', onSelectChange);
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type='checkbox'; cb.dataset.idx = idx;
+        label.appendChild(cb);
+
+        const text = document.createElement('div');
+        const name = document.createElement('div');
+        const more = g.link
+          ? ` — <a href="${g.link}" target="_blank" rel="noopener">узнать подробнее</a>`
+          : (g.desc ? ` — <span class="sub">${g.desc}</span>` : '');
+        name.innerHTML = `${g.name} — <b>${g.price}</b> очков${more}`;
+        text.appendChild(name);
+
+        row.appendChild(label);
+        row.appendChild(text);
         giftListEl.appendChild(row);
+
+        cb.addEventListener('change', onSelectChange);
       });
 
       btnConfirm.onclick = confirmGifts;
@@ -556,11 +540,13 @@
       finalModal.classList.remove('show');
       finalModal.setAttribute('aria-hidden','true');
     }
+
     function onSelectChange(e){
       const idx = parseInt(e.target.dataset.idx,10);
       selection[idx] = e.target.checked;
       recompute();
     }
+
     function recompute(){
       let spent = 0;
       Object.entries(selection).forEach(([k,v])=>{
@@ -568,17 +554,20 @@
         const g = pricedGifts[parseInt(k,10)];
         spent += g.price;
       });
+
       spentEl.textContent = spent.toString();
       let warn = '';
-      if(spent > budget) warn = 'Перебор бюджета.';
-      finalWarn.textContent = warn;
+      if(spent > budget) warn += 'Перебор бюджета. ';
+      finalWarn.textContent = warn.trim();
       btnConfirm.disabled = warn.length>0 || spent===0;
     }
+
     function clearSelection(){
       selection = {};
       document.querySelectorAll('#giftList input[type="checkbox"]').forEach(cb=> cb.checked=false);
       recompute();
     }
+
     function confirmGifts(){
       const chosen = Object.entries(selection)
         .filter(([,v])=>v)
