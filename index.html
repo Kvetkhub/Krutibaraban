@@ -301,8 +301,11 @@
       { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' },
       { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК'] }
     ];
+    const SUPER_Q = 'Белорусский дипломатический подарок, который всегда принимают без визы. Что это?';
+    const SUPER_A = 'БУЛЬБА';
+
     let round = 0; let score = 0;
-    let superPhase = false; // <— режим супер-игры
+    let superPhase = false; // режим супер-игры
 
     function normalizeRu(s){ return s.trim().toUpperCase().replace(/Ё/g,'Е'); }
     function getAcceptList(a){ return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)]; }
@@ -310,12 +313,12 @@
     function showQuestion(){
       const r = rounds[round];
       if(!r){
-        // все обычные вопросы пройдены — переходим в супер-игру
+        // переходим в супер-игру
         superPhase = true;
-        document.getElementById('rule').innerHTML = 'СУПЕР ИГРА: крути барабан и ответь на вопрос!';
-        document.getElementById('question').textContent = 'Супер-игра: ответь на финальный вопрос и удвой очки.';
-        document.getElementById('length').textContent  = '';
-        const input = document.getElementById('answer'); input.value='';
+        document.getElementById('rule').textContent = 'СУПЕР ИГРА: крути барабан и ответь на финальный вопрос!';
+        document.getElementById('question').textContent = `Супер-игра: ${SUPER_Q}`;
+        document.getElementById('length').textContent  = 'Слово из 6 букв';
+        const input = document.getElementById('answer'); input.value=''; input.focus();
         document.getElementById('answerBox').classList.remove('correct','wrong');
         return;
       }
@@ -341,7 +344,10 @@
         if (superPhase){
           document.getElementById('qTitle').textContent = 'СУПЕР ИГРА';
           document.getElementById('qScore').textContent = `${p}`;
-          document.getElementById('qText').innerHTML = 'очки удваиваются<br>Вопрос: Белорусский дипломатический подарок, который всегда принимают без визы. Что это?';
+          document.getElementById('qText').innerHTML = 'очки удваиваются<br>Вопрос: ' + SUPER_Q;
+          // Также дублируем справа
+          document.getElementById('question').textContent = `Супер-игра: ${SUPER_Q}`;
+          document.getElementById('length').textContent  = 'Слово из 6 букв';
         } else {
           const r = rounds[round];
           document.getElementById('qTitle').textContent = 'Твои баллы';
@@ -351,10 +357,8 @@
         qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
       }, 1200);
 
-      // Запоминаем текущие очки рулетки в data-атрибуте (если надо использовать)
       qModal.dataset.spinPoints = String(p);
 
-      // Показать сам вопрос справа (для обычных раундов)
       if(!superPhase) showQuestion();
     }
 
@@ -363,30 +367,30 @@
       const got  = normalizeRu(document.getElementById('answer').value);
 
       if (superPhase){
-        // принимаем только "БУЛЬБА"
-        if (got === 'БУЛЬБА'){
+        if (got === SUPER_A){
           box.classList.remove('wrong'); box.classList.add('correct');
           log('🏆 Супер-игра: правильный ответ! Очки удвоены.');
           try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
-          // удвоение очков
           score = score * 2;
           document.getElementById('score').textContent = score;
 
-          // закрываем модалку и через 3 сек останавливаем музыку и показываем видео
+          // закрываем модалку (на случай, если она ещё открыта)
           qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
+
+          // через 3 сек — пауза музыки и видео
           setTimeout(()=>{
             try{ spinSong.pause(); }catch(e){}
             videoModal.classList.add('show'); videoModal.setAttribute('aria-hidden','false');
             try{ finalVideo.currentTime = 0; finalVideo.play(); }catch(e){}
           }, 3000);
-          // выходим из супер-режима
+
           superPhase = false;
         } else {
-          // неверный ответ — показываем сообщение в модалке, не закрываем
           try{ wrongSfx.currentTime=0; wrongSfx.play(); }catch(e){}
           const t = document.getElementById('qText');
           t.innerHTML = 'Эхх, вы совершили ошибку. Удваивание очков отменяется. Попробуйте снова.';
           box.classList.remove('correct'); box.classList.add('wrong');
+          log('❌ Супер-игра: ошибка. Удваивание очков отменяется. Попробуйте снова.');
         }
         return;
       }
@@ -405,11 +409,10 @@
 
         round++;
         setTimeout(()=>{
-          // если все обычные вопросы закончились — подготовка к супер-игре
           if(round >= rounds.length){
             document.getElementById('rule').textContent = 'СУПЕР ИГРА: крути барабан и ответь на финальный вопрос!';
-            document.getElementById('question').textContent = 'Супер-игра: ответь на финальный вопрос и удвой очки.';
-            document.getElementById('length').textContent = '';
+            document.getElementById('question').textContent = `Супер-игра: ${SUPER_Q}`;
+            document.getElementById('length').textContent = 'Слово из 6 букв';
             superPhase = true;
           } else {
             document.getElementById('rule').textContent = 'Снова крути барабан!';
@@ -426,19 +429,17 @@
     document.getElementById('submit').addEventListener('click', checkAnswer);
     document.getElementById('answer').addEventListener('keydown', e=>{ if(e.key==='Enter') checkAnswer(); });
 
-    // Result modal controls
+    // ===== Модалка результатов / супер-игры
     const qModal = document.getElementById('qModal');
     const videoModal = document.getElementById('videoModal');
     const finalVideo = document.getElementById('finalVideo');
     const videoClose = document.getElementById('videoClose');
 
     document.getElementById('qClose').addEventListener('click',()=>{
-      // Закрываем модалку вопроса; если это супер-игра, оставляем её открытой до правильного ответа
-      if (!superPhase){
-        qModal.classList.remove('show');
-        qModal.setAttribute('aria-hidden','true');
-        document.getElementById('answer').focus();
-      }
+      // ТЕПЕРЬ ВСЕГДА ЗАКРЫВАЕМ — даже в супер-игре
+      qModal.classList.remove('show');
+      qModal.setAttribute('aria-hidden','true');
+      document.getElementById('answer').focus();
     });
 
     document.getElementById('reset').addEventListener('click', ()=>{
@@ -481,7 +482,7 @@
       draw();
     }
 
-    // ===== Видео -> подарки (оставлено как раньше)
+    // ===== Видео -> подарки
     function closeVideoAndOpenGifts(){
       try{ finalVideo.pause(); }catch(e){}
       videoModal.classList.remove('show'); videoModal.setAttribute('aria-hidden','true');
@@ -490,14 +491,14 @@
     videoClose.addEventListener('click', closeVideoAndOpenGifts);
     finalVideo.addEventListener('ended', closeVideoAndOpenGifts);
 
-    // ===== Подарки (без изменений логики выбора)
+    // ===== Подарки
     const giftsSource = [
       {name:'Горный велосипед', tier:'4/4', desc:'Согласовывается индивидуально'},
       {name:'Прыжок с парашютом в любой точке мира', tier:'4/4', desc:'Даётся неограниченный по времени купон для прыжка в любом месте'},
       {name:'Вайбовая колонка Marshall', tier:'4/4', link:'https://catalog.onliner.by/wspeaker/marshall/acton2bl1'},
       {name:'E-book Amazon последняя версия', tier:'4/4', link:'https://kindle.by/devices/amazon-kindle-paperwhite-6-12-generation-16gb-black'},
       {name:'Алисина колонка (AI edition)', tier:'2/4', link:'https://catalog.onliner.by/wspeaker/yandex/yanstmidiblk'},
-      {name:'Премиум наушники Realme (последняя модель)', tier:'2/4', link:'https://market.yandex.ru/card/naushniki-besprovodnyye-realme-buds-air7air7-pro-bluetooth-c-shumopодавлениeм/4598149761?ogV=-4'},
+      {name:'Премиум наушники Realme (последняя модель)', tier:'2/4', link:'https://market.yandex.ru/card/naushniki-besprovodnyye-realme-buds-air7air7-pro-bluetooth-c-shumopodavleniyem/4598149761?ogV=-4'},
       {name:'Скидка 30% на авиабилет в любую страну', tier:'2/4', desc:'Скидка предоставляется по запросу и приходит в виде USDT'},
       {name:'Отдых в баньке «Избушка»', tier:'2/4', link:'https://www.saunaminska.by/izbushka.htm'},
       {name:'Поездка в национальный парк Нарочаны на выходные', tier:'2/4', desc:'Не, ну можем и такое организовать :))'},
@@ -615,8 +616,6 @@
   </script>
 </body>
 </html>
-
-
 
 
 
