@@ -158,7 +158,8 @@
       <h3 class="modal-title" id="qTitle">Твои баллы</h3>
       <div id="qScore" class="modal-text bigScore"></div>
       <div id="qText" class="modal-text"></div>
-      <button id="qClose" class="btn">Окей</button>
+      <!-- ТОЛЬКО ЗАМЕНА ТЕКСТА КНОПКИ -->
+      <button id="qClose" class="btn">ЙОУ</button>
     </div>
   </div>
 
@@ -192,7 +193,7 @@
 
   <script>
     // ===== Intro (audio + typewriter)
-    const introTextFixed = `Здравствуй, Евгений. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан. Правила очень просты. Получай удовольствие и выигрывай призы`;
+    const introTextFixed = `Доброе утро, Женёк. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан. Правила очень просты. Включи обогреватель, навали себе тортика с чаёчком и получай удовольствие родненький.`;
     const introAudio = new Audio('intro.mp3');
     const intro = document.getElementById('intro');
     const introPlay = document.getElementById('introPlay');
@@ -262,7 +263,7 @@
       spinning = true;
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      const DURATION = 10000;  // стабильные ~10s каждый раз
+      const DURATION = 10000;
       const TURNS    = 7;
       const startAngle = angle;
       const n = points.length; const arc = 2*Math.PI/n;
@@ -305,7 +306,7 @@
     const SUPER_A = 'БУЛЬБА';
 
     let round = 0; let score = 0;
-    let superPhase = false; // режим супер-игры
+    let superPhase = false;
 
     function normalizeRu(s){ return s.trim().toUpperCase().replace(/Ё/g,'Е'); }
     function getAcceptList(a){ return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)]; }
@@ -313,7 +314,6 @@
     function showQuestion(){
       const r = rounds[round];
       if(!r){
-        // переходим в супер-игру
         superPhase = true;
         document.getElementById('rule').textContent = 'СУПЕР ИГРА: крути барабан и ответь на финальный вопрос!';
         document.getElementById('question').textContent = `Супер-игра: ${SUPER_Q}`;
@@ -334,18 +334,15 @@
       const p = points[idx];
       log(`🎯 Выпало: <b>${p}</b> очков`);
 
-      // Текст в панели
       document.getElementById('rule').innerHTML = superPhase
         ? `СУПЕР ИГРА: <span class="points">${p}</span> очков на барабане. Ответь на финальный вопрос!`
         : `Твои очки за барабан: <span class="points">${p}</span>. Ответь на вопрос!`;
 
-      // Показ модалки с вопросом
       setTimeout(()=>{
         if (superPhase){
           document.getElementById('qTitle').textContent = 'СУПЕР ИГРА';
           document.getElementById('qScore').textContent = `${p}`;
           document.getElementById('qText').innerHTML = 'очки удваиваются<br>Вопрос: ' + SUPER_Q;
-          // Также дублируем справа
           document.getElementById('question').textContent = `Супер-игра: ${SUPER_Q}`;
           document.getElementById('length').textContent  = 'Слово из 6 букв';
         } else {
@@ -374,10 +371,8 @@
           score = score * 2;
           document.getElementById('score').textContent = score;
 
-          // закрываем модалку (на случай, если она ещё открыта)
           qModal.classList.remove('show'); qModal.setAttribute('aria-hidden','true');
 
-          // через 3 сек — пауза музыки и видео
           setTimeout(()=>{
             try{ spinSong.pause(); }catch(e){}
             videoModal.classList.add('show'); videoModal.setAttribute('aria-hidden','false');
@@ -395,7 +390,6 @@
         return;
       }
 
-      // ===== Обычные вопросы
       const r = rounds[round]; if(!r) return;
       const list = getAcceptList(r.a);
 
@@ -436,7 +430,6 @@
     const videoClose = document.getElementById('videoClose');
 
     document.getElementById('qClose').addEventListener('click',()=>{
-      // ТЕПЕРЬ ВСЕГДА ЗАКРЫВАЕМ — даже в супер-игре
       qModal.classList.remove('show');
       qModal.setAttribute('aria-hidden','true');
       document.getElementById('answer').focus();
