@@ -53,14 +53,6 @@
     .answer.wrong input{border-color:var(--bad)}
     .note{font-size:12px; color:var(--muted)}
 
-    /* Intro modal */
-    .intro{position:fixed; inset:0; display:grid; place-items:center; background:rgba(7,10,24,.88); z-index:1000}
-    .intro.hide{display:none}
-    .ibox{width:min(720px,92vw); background:linear-gradient(180deg, #12265c, #0d1b46); border:1px solid rgba(255,255,255,.12); border-radius:20px; box-shadow:0 28px 90px rgba(0,0,0,.55); padding:18px}
-    .ibox h3{margin:0; color:var(--gold); text-shadow:0 1px 0 #000}
-    .itype{margin-top:10px; background:#0f1538; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; min-height:120px; max-height:280px; overflow:auto; font-weight:700; line-height:1.35}
-    .icta{display:flex; gap:10px; margin-top:12px}
-
     /* Q modal */
     .modal{position:fixed; inset:0; background:rgba(5,10,25,.86); display:none; place-items:center; z-index:1500}
     .modal.show{display:grid}
@@ -218,7 +210,7 @@
     const winSfx1  = new Audio('zrejdbxx.mp3');
     const winSfx2  = new Audio('pole_word_1996.mp3');
 
-    // ===== Wheel
+    // ===== Wheel (фиксированная длительность и обороты для каждого спина)
     const points = [100,200,300,400,500,600,700,800,900,1000];
     const wheel  = document.getElementById('wheel');
     const ctx    = wheel.getContext('2d');
@@ -263,8 +255,8 @@
 
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      const DURATION = 10000;     // фиксированно ~10с каждый раз
-      const TURNS    = 7;         // фиксированное число оборотов
+      const DURATION = 10000; // ~10с всегда
+      const TURNS    = 7;     // 7 оборотов всегда
       const startAngle = angle;
       const n = points.length; const arc = 2*Math.PI/n;
 
@@ -287,21 +279,44 @@
     }
     document.getElementById('spin').addEventListener('click', spin);
 
+    // ===== Rounds (добавлена СУПЕР ИГРА после «ШУСТРИК»)
+    const rounds = [
+      { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
+      { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
+      { q: 'Как звали отца отца отца?', a: 'СЕМЁН' },
+      { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' },
+      { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК'] },
+      { q: 'Белорусский дипломатический подарок, который всегда принимают без визы. Что это?', a: 'БУЛЬБА', super:true }
+    ];
+    let round = 0; 
+    let score = 0;
+
     function finalize(idx){
       try{ spinSong.volume = 0.3; if (spinSong.paused) spinSong.play(); }catch(e){}
       const p = points[idx];
       log(`🎯 Выпало: <b>${p}</b> очков`);
-      document.getElementById('rule').innerHTML = `Твои очки за барабан: <span class="points">${p}</span>. Ответь на вопрос!`;
 
       const r = rounds[round];
-      setTimeout(()=>{
-        document.getElementById('qTitle').textContent = 'Твои баллы';
-        document.getElementById('qScore').textContent = `${p}`;
-        document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
-        qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
-      }, 1200);
+      const isSuper = !!(r && r.super);
 
-      showQuestion();
+      document.getElementById('rule').innerHTML = isSuper
+        ? `СУПЕР ИГРА! Ответь правильно — и твои очки удвоятся!`
+        : `Твои очки за барабан: <span class="points">${p}</span>. Ответь на вопрос!`;
+
+      setTimeout(()=>{
+        if(isSuper){
+          document.getElementById('qTitle').innerHTML = '💥 <span style="font-size:1.15em">СУПЕР ИГРА</span>';
+          document.getElementById('qScore').textContent = '×2';
+          document.getElementById('qText').innerHTML = `Очки за правильный ответ <b>удваиваются</b>!<br>${r.q}`;
+        } else {
+          document.getElementById('qTitle').textContent = 'Твои баллы';
+          document.getElementById('qScore').textContent = `${p}`;
+          document.getElementById('qText').textContent  = `Твой вопрос: "${r ? r.q : 'Игра окончена! 🎉'}"`;
+        }
+        qModal.classList.add('show'); qModal.setAttribute('aria-hidden','false');
+      }, 1000);
+
+      showQuestion(p);
     }
 
     function log(html){
@@ -311,29 +326,23 @@
       box.prepend(d);
     }
 
-    // ===== Questions
-    const rounds = [
-      { q: 'В этот день люди собирают палки, ищут ветку и прыгают в огонь. Как называется это мероприятие?', a: 'КУПАЛА' },
-      { q: 'Стоит макнуть туда блинчик, как рука сама тянется ко рту. Туда это куда?', a: ['МАЧАНКА','МАЧАНКУ'] },
-      { q: 'Как звали отца отца отца?', a: 'СЕМЁН' },
-      { q: 'Кто всегда поможет в трудную минуту?', a: 'БРО' },
-      { q: 'Некоторые члены семьи хотели его убить — другие же скрывали и помогли выжить. По итогу он прожил все свои девять. Как его звали?', a: ['ШУСТРИК'] }
-    ];
-    let round = 0; let score = 0;
-
     function normalizeRu(s){ return s.trim().toUpperCase().replace(/Ё/g,'Е'); }
     function getAcceptList(a){ return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)]; }
 
     function showQuestion(){
       const r = rounds[round];
       if(!r){
-        // все вопросы пройдены — короткая пауза и финальное видео, потом подарки
         endGameWithVideo();
         return;
       }
-      document.getElementById('question').textContent = `Вопрос: ${r.q}`;
-      const firstAns = Array.isArray(r.a) ? r.a[0] : r.a;
-      document.getElementById('length').textContent  = `Слово из ${normalizeRu(firstAns).length} букв`;
+      if(r.super){
+        document.getElementById('question').innerHTML = `<b style="font-size:1.2em">💥 СУПЕР ИГРА — очки за правильный ответ удваиваются!</b><br>${r.q}`;
+        document.getElementById('length').textContent  = '';
+      } else {
+        document.getElementById('question').textContent = `Вопрос: ${r.q}`;
+        const firstAns = Array.isArray(r.a) ? r.a[0] : r.a;
+        document.getElementById('length').textContent  = `Слово из ${normalizeRu(firstAns).length} букв`;
+      }
       const input = document.getElementById('answer'); input.value=''; input.focus();
       document.getElementById('answerBox').classList.remove('correct','wrong');
     }
@@ -346,20 +355,30 @@
 
       if(list.includes(got)){
         box.classList.remove('wrong'); box.classList.add('correct');
-        const p = parseInt(document.getElementById('qScore').textContent || '0', 10);
-        if(!isNaN(p)){ score += p; document.getElementById('score').textContent = score; }
+
+        if(r.super){
+          // супер игра → удваиваем общий счёт
+          score = score * 2;
+          log('💥 СУПЕР ИГРА: очки удвоены!');
+        } else {
+          const p = parseInt(document.getElementById('qScore').textContent || '0', 10);
+          if(!isNaN(p)) score += p;
+        }
+
+        document.getElementById('score').textContent = score;
         log('✅ Совершенно верно!');
         launchConfetti();
         try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
 
         round++;
         setTimeout(()=>{
-          document.getElementById('rule').textContent = 'Снова крути барабан!';
-          document.getElementById('question').textContent = 'Вопрос появится после барабана.';
-          document.getElementById('length').textContent = '';
-          if(round >= rounds.length){
-            // дальше — финальное видео => подарки
-            // ничего не делаем тут — showQuestion вызовется из finalize следующего спина не будет, т.к. спинов больше нет
+          if(r.super){
+            // Сразу завершаем игру и идём на видео
+            endGameWithVideo();
+          } else {
+            document.getElementById('rule').textContent = 'Снова крути барабан!';
+            document.getElementById('question').textContent = 'Вопрос появится после барабана.';
+            document.getElementById('length').textContent = '';
           }
         }, 500);
       } else {
@@ -425,12 +444,12 @@
     const videoClose = document.getElementById('videoClose');
 
     function endGameWithVideo(){
-      // маленькая пауза перед показом видео
+      // Пауза перед видео, остановка фоновой музыки
       setTimeout(()=>{
         try{ spinSong.pause(); }catch(e){}
         videoModal.classList.add('show'); videoModal.setAttribute('aria-hidden','false');
         try{ finalVideo.currentTime = 0; finalVideo.play(); }catch(e){}
-      }, 2000); // пауза перед видео
+      }, 2000); // 2 секунды пауза
     }
 
     function closeVideoAndOpenGifts(){
@@ -441,11 +460,10 @@
 
     videoClose.addEventListener('click', closeVideoAndOpenGifts);
     finalVideo.addEventListener('ended', ()=> {
-      // по окончании видео просто показываем кнопку "Закрыть" (она уже есть),
-      // пользователь сам решит — закрыть сейчас или пересмотреть.
+      // пользователь может нажать «Закрыть», чтобы перейти к подаркам
     });
 
-    // ===== Gifts
+    // ===== Gifts (твои позиции + вычисление цен кратных 100)
     const giftsSource = [
       // (4/4)
       {name:'Горный велосипед', tier:'4/4', desc:'Согласовывается индивидуально'},
@@ -485,8 +503,7 @@
     function priceByTier(tier, total){
       if(tier==='4/4') return roundTo100(randRange(total*0.90, total*1.00));
       if(tier==='2/4') return roundTo100(randRange(total*0.40, total*0.48));
-      // 1/4
-      return roundTo100(randRange(total*0.20, total*0.25));
+      return roundTo100(randRange(total*0.20, total*0.25)); // 1/4
     }
 
     function openGifts(finalScore){
@@ -496,13 +513,8 @@
       finalWarn.textContent = '';
       finalIntro.textContent = `Евгений, твой итоговый счёт — ${finalScore} очков. Выбирай призы на эту сумму:`;
 
-      // цены
-      pricedGifts = giftsSource.map(g=>{
-        const price = priceByTier(g.tier, budget);
-        return {...g, price};
-      });
+      pricedGifts = giftsSource.map(g=>({ ...g, price: priceByTier(g.tier, budget) }));
 
-      // рендер
       giftListEl.innerHTML = '';
       selection = {};
       pricedGifts.forEach((g,idx)=>{
@@ -515,12 +527,10 @@
         label.appendChild(cb);
 
         const text = document.createElement('div');
-        const name = document.createElement('div');
         const more = g.link
           ? ` — <a href="${g.link}" target="_blank" rel="noopener">узнать подробнее</a>`
           : (g.desc ? ` — <span class="sub">${g.desc}</span>` : '');
-        name.innerHTML = `${g.name} — <b>${g.price}</b> очков${more}`;
-        text.appendChild(name);
+        text.innerHTML = `${g.name} — <b>${g.price}</b> очков${more}`;
 
         row.appendChild(label);
         row.appendChild(text);
@@ -579,7 +589,6 @@
   </script>
 </body>
 </html>
-
 
 
 
