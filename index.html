@@ -69,8 +69,7 @@
       border:1px solid rgba(255,255,255,.12); box-shadow:0 28px 90px rgba(0,0,0,.55); text-align:center}
     .modal-title{margin:0 0 8px; color:var(--gold); font-weight:900}
     .modal-text{font-weight:800; margin:6px 0 14px}
-    .bigScore{font-weight:900; font-size:clamp(42px, 9vw, 120px); line-height:1; color:var(--gold);
-      text-shadow:0 2px 0 #000,0 10px 26px rgba(0,0,0,.35)}
+    .bigScore{font-weight:900; font-size:clamp(42px, 9vw, 120px); line-height:1; color:var(--gold); text-shadow:0 2px 0 #000,0 10px 26px rgba(0,0,0,.35)}
 
     .points{font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(255,220,115,.9)}
     canvas.confetti{position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:2000}
@@ -94,6 +93,24 @@
     .vwrap{position:relative; width:min(1280px,96vw)}
     .vwrap video{width:100%; height:auto; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.6)}
     .vclose{position:absolute; top:-44px; right:0}
+
+    /* >>> ADDED: яркий модал «Подарок в пути» */
+    .celebrate .modal-card{
+      background:radial-gradient(1200px 500px at 50% -20%, #ffd86b, #ffb23a 40%, #ff8b3a 70%, #b24a00 100%);
+      color:#241400;
+      border:0;
+      text-shadow:none;
+    }
+    .celebrate .modal-title{
+      color:#241400;
+      font-size:clamp(24px, 3.5vw, 40px);
+      text-shadow:0 1px 0 rgba(255,255,255,.6);
+    }
+    .celebrate .modal-text{
+      font-weight:800;
+      opacity:.95;
+    }
+    .btn-xl{font-size:22px; padding:16px 28px; border-radius:16px; box-shadow:0 6px 0 #8c4e00, 0 18px 40px rgba(0,0,0,.35)}
   </style>
 </head>
 <body>
@@ -193,6 +210,24 @@
     </div>
   </div>
 
+  <!-- >>> ADDED: яркое уведомление после выбора подарков -->
+  <div id="giftDoneModal" class="modal celebrate" aria-hidden="true">
+    <div class="modal-card">
+      <h3 class="modal-title">🎉 Подарок от мамы и брата уже в пути!</h3>
+      <p class="modal-text">Спасибо, что сыграл в наше шоу. Осталось посмотреть финальное поздравление ❤️</p>
+      <button id="finishGameBtn" class="btn btn-xl">Завершить игру</button>
+    </div>
+  </div>
+
+  <!-- >>> ADDED: модал с YouTube финалом -->
+  <div id="youtubeModal" class="vmodal" aria-hidden="true">
+    <div class="vwrap">
+      <button id="ytClose" class="btn vclose">Закрыть ✖</button>
+      <iframe id="ytFrame" width="100%" height="600" style="border-radius:14px; border:none; box-shadow:0 20px 60px rgba(0,0,0,.6)"
+        src="" title="Final congrats" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
+
   <script>
     // ===== Intro (audio + typewriter)
     const introTextFixed = `Доброе утро, Женёк. Сегодня у тебя день рождения, а значит время сыграть в игру: крути барабан. Правила очень просты. Включи обогреватель, навали себе тортика с чаёчком и получай удовольствие родненький.`;
@@ -265,8 +300,8 @@
       spinning = true;
       try{ spinSong.volume = 1.0; if (spinSong.paused) spinSong.play(); }catch(e){}
 
-      const DURATION = 10000; // ~10с стабильно
-      const TURNS    = 7;     // одинаково «мощно» каждый раз
+      const DURATION = 10000;
+      const TURNS    = 7;
       const startAngle = angle;
       const n = points.length; const arc = 2*Math.PI/n;
 
@@ -295,7 +330,6 @@
       log(`🎯 Выпало: <b>${p}</b> очков`);
 
       if(superSpinPending){
-        // показываем модал СУПЕР-ИГРЫ
         document.getElementById('qTitle').textContent = 'СУПЕР ИГРА';
         document.getElementById('qScore').textContent = '';
         document.getElementById('qText').innerHTML = 'Очки удваиваются!<br>Вопрос: «Белорусский дипломатический подарок, который всегда принимают без визы. Что это?»';
@@ -341,8 +375,8 @@
 
     let round = 0; let score = 0;
     let currentSpinPoints = 0;
-    let superSpinPending = false;   // готовим спин к супер-игре
-    let superRoundActive = false;   // сейчас отвечаем супер-вопрос
+    let superSpinPending = false;
+    let superRoundActive = false;
 
     function normalizeRu(s){ return s.trim().toUpperCase().replace(/Ё/g,'Е'); }
     function getAcceptList(a){ return Array.isArray(a) ? a.map(normalizeRu) : [normalizeRu(a)]; }
@@ -351,7 +385,6 @@
       currentSpinPoints = p;
       const r = normalRounds[round];
       if(!r){
-        // все обычные вопросы закрыты — просим ещё раз крутануть для СУПЕР-ИГРЫ
         superSpinPending = true;
         document.getElementById('rule').textContent = 'Финал! Крути барабан для СУПЕР ИГРЫ.';
         document.getElementById('question').textContent = 'СУПЕР ИГРА появится после следующего барабана.';
@@ -380,8 +413,6 @@
           try{ (Math.random()<0.5 ? winSfx1 : winSfx2).play(); }catch(e){}
           superRoundActive = false;
           superSpinPending = false;
-
-          // пауза 3 секунды — видео — потом подарки
           setTimeout(()=> endGameWithVideo(), 3000);
         } else {
           box.classList.remove('correct'); box.classList.add('wrong');
@@ -404,7 +435,6 @@
         round++;
         setTimeout(()=>{
           if(round >= normalRounds.length){
-            // все обычные — просим крутить для супер-игры
             document.getElementById('rule').textContent = 'Финал! Крути барабан для СУПЕР ИГРЫ.';
             document.getElementById('question').textContent = 'СУПЕР ИГРА появится после следующего барабана.';
             document.getElementById('length').textContent  = '';
@@ -483,7 +513,7 @@
         try{ spinSong.pause(); }catch(e){}
         videoModal.classList.add('show'); videoModal.setAttribute('aria-hidden','false');
         try{ finalVideo.currentTime = 0; finalVideo.play(); }catch(e){}
-      }, 0); // супер-игра уже дала 3с паузы перед вызовом
+      }, 0);
     }
 
     function closeVideoAndOpenGifts(){
@@ -496,24 +526,21 @@
 
     // ===== Gifts
     const giftsSource = [
-      // (4/4)
       {name:'Горный велосипед', tier:'4/4', desc:'Согласовывается индивидуально'},
       {name:'Прыжок с парашютом в любой точке мира', tier:'4/4', desc:'Даётся неограниченный по времени купон для прыжка в любом месте'},
       {name:'Вайбовая колонка Marshall', tier:'4/4', link:'https://catalog.onliner.by/wspeaker/marshall/acton2bl1'},
       {name:'E-book Amazon последняя версия', tier:'4/4', link:'https://kindle.by/devices/amazon-kindle-paperwhite-6-12-generation-16gb-black'},
 
-      // (2/4)
       {name:'Алисина колонка (AI edition)', tier:'2/4', link:'https://catalog.onliner.by/wspeaker/yandex/yanstmidiblk'},
-      {name:'Премиум наушники Realme (последняя модель)', tier:'2/4', link:'https://market.yandex.ru/card/naushniki-besprovodnyye-realme-buds-air7air7-pro-bluetooth-c-shumopodavleniyem/4598149761?do-waremd5=HbJaYobNJ7zDtdV7Toe1cA&sponsored=1&cpc=eGiwCaltmhbiDEhIogGOZIfhhnejIxuiwGDOjvCmOD96swKkTPv0JNMt3Y_3XeEVhoZRhyBb3lFaFeXVs_b8J_B4S0xOmRIFQX1_kkYxqPec5dOivpIKH5Qp_dx6W5cBBsJ5G9S-cDrZVhQUWYHoU6OhXmMS7JoBeoYBaDp3Hk2l8HVmkfL3JBIH_Pc6cO5mIehnQ0WUdoxTNrLF-i7dTS_ikl1mc8F6gSYWH8CSbt-MkMD9ubOh2ZwFHs2QpJHZ3jJAfqiAPSdUYEOh8jH3q2iIMelPWNb1Izzui_XkyfoKxMvHSlnWlBhA9SjDfvIakGT3Wf5--GfZPHH4T-pIpvKlpF_6gXTNVzE3J91RCm_DukkBxCeGO9vwd1OgfrrKt87R4YnH7fv4sjyX1gxgDg3av3PX7f_BxLUhHUybypnmElNdaNAsCZCLTiNDgFOjTFV6anh9J2EK9L5IxKs0dAm3A5Y28PLVFah5U3zC6OrzdmHhN_jbYXCEOLXJTLBxHkx3RyFlVcG0GlJt7LmNVfNB9Wq5R0xNX2SVу5vVI1lWJ0Cm79U6qU79eewAgvXaHGfWhXvfCqgVp_WbklR2Ew%2C%2C&ogV=-4'},
+      {name:'Премиум наушники Realme (последняя модель)', tier:'2/4', link:'https://market.yandex.ru/card/naushniki-besprovodnyye-realme-buds-air7air7-pro-bluetooth-c-shumopодавлением/4598149761?ogV=-4'},
       {name:'Скидка 30% на авиабилет в любую страну', tier:'2/4', desc:'Скидка предоставляется по запросу и приходит в виде USDT'},
       {name:'Отдых в баньке «Избушка»', tier:'2/4', link:'https://www.saunaminska.by/izbushka.htm'},
       {name:'Поездка в национальный парк Нарочаны на выходные', tier:'2/4', desc:'Не, ну можем и такое организовать :))'},
       {name:'Очки с камерой 4K Indigo Polarized', tier:'2/4', link:'https://catalog.onliner.by/actioncamera/xtry/xtg113fhdindigop'},
 
-      // (1/4)
       {name:'Аэрогриль Брайер «Йооу эдишн BR2039»', tier:'1/4', link:'https://brayer.ru/catalog/aerogrili/aerogril-brayer-br2039/'},
       {name:'Электрическая зубная щётка Oclean', tier:'1/4', link:'https://catalog.onliner.by/toothbrush/oclean/oclexproelitegre'},
-      {name:'Кольцо для отслеживания сна Mijia', tier:'1/4', link:'https://market.yandex.ru/card/xiaomi-smart-ring-bluetooth-black-size-11/4589470934?do-waremd5=kQiB0GAlTYetiYIEuMTFzg&cpc=btYqqIlf1j_d006RY_IKbrxejstrKi14H-JgxeCaABVEF91Fgc40usZYfWyRTrF1zPedQGfOsBBGV43jY9Iw0qGtR31vhk9iYnCuu51y3BQSCAEILqQw3mP09xEV3CylBV1vaLCToRDCyBnwNhewdniY9JxMsdNAffqda-1C3hiRULh5EZOwd9H924jOBjLkV4bpKORVAunl8TWpVmh_UUKs0S_Y62aHCO78I6u53t7UPOI-zCCBj8aDk523MuWEMwu1O1iejiwdTVpcOLIJ7Vdw9upueL2tD_rjcm0clDSFPp4fzYDNg9DKCbN89rMla0GeCztd83oXmxGkidxCcaARwt-7r63WL2Ra5alJkv-WgEzYQAIOz9fGeifF7Q-Rk2ylM6yYuhBRHBlYfS9oGWmGfldT7xVszxKBZQUg8jonLhv0uinaUDuBnpLrfzcoD1SLxqh6lu8__72lQUmK3U7eOI-Lbnp2J-NFVBAUrAlrrYNPDjAtJ0NE4f-vwoMHeI-WHiV2MA3fMeOjo6MwCnu8qiFk1EdY4JUOcyE4zRWEpt4Yj97NQgQeogMHUkXw&ogV=-4'}
+      {name:'Кольцо для отслеживания сна Mijia', tier:'1/4', link:'https://market.yandex.ru/card/xiaomi-smart-ring-bluetooth-black-size-11/4589470934?ogV=-4'}
     ];
 
     const finalModal = document.getElementById('finalModal');
@@ -534,7 +561,7 @@
     function priceByTier(tier, total){
       if(tier==='4/4') return roundTo100(randRange(total*0.90, total*1.00));
       if(tier==='2/4') return roundTo100(randRange(total*0.40, total*0.48));
-      return roundTo100(randRange(total*0.20, total*0.25)); // 1/4
+      return roundTo100(randRange(total*0.20, total*0.25));
     }
 
     function openGifts(finalScore){
@@ -636,8 +663,9 @@
       fetch("/", { method: "POST", body: data })
         .then(()=>{
           ns.textContent = '✅ Выбор отправлен (Netlify Forms).';
-          alert(`Выбрано:\n${names}\n\nСумма: ${spent} из ${budget}\n\nСпасибо!`);
           closeGifts();
+          // >>> ADDED: вместо alert — яркое уведомление и переход к финальному ролику
+          showGiftDoneModal();
         })
         .catch((err)=>{
           console.error(err);
@@ -645,6 +673,33 @@
           alert('Не удалось отправить выбор. Попробуй ещё раз.');
         });
     }
+
+    // >>> ADDED: логика модалки «Подарок в пути» и YouTube
+    const giftDoneModal = document.getElementById('giftDoneModal');
+    const finishGameBtn = document.getElementById('finishGameBtn');
+    const youtubeModal  = document.getElementById('youtubeModal');
+    const ytFrame       = document.getElementById('ytFrame');
+    const ytClose       = document.getElementById('ytClose');
+
+    function showGiftDoneModal(){
+      giftDoneModal.classList.add('show');
+      giftDoneModal.setAttribute('aria-hidden','false');
+    }
+
+    finishGameBtn.addEventListener('click', ()=>{
+      giftDoneModal.classList.remove('show');
+      giftDoneModal.setAttribute('aria-hidden','true');
+      try{ spinSong.pause(); }catch(e){}
+      ytFrame.src = "https://www.youtube.com/embed/V41i42fp4dU?autoplay=1";
+      youtubeModal.classList.add('show');
+      youtubeModal.setAttribute('aria-hidden','false');
+    });
+
+    ytClose.addEventListener('click', ()=>{
+      ytFrame.src = "";
+      youtubeModal.classList.remove('show');
+      youtubeModal.setAttribute('aria-hidden','true');
+    });
   </script>
 
   <!-- Netlify capture form (hidden, must be in static HTML) -->
